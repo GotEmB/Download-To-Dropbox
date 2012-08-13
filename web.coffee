@@ -38,7 +38,7 @@ expressServer.get "/", (req, res, next) ->
 server = http.createServer(expressServer)
 
 io = socket_io.listen server
-io.set "log level", 0
+io.set "log level", 3
 io.sockets.on "connection", (socket) ->
 	
 	socket.on "request_token_authorized", (params, callback) ->
