@@ -27,7 +27,6 @@ expressServer.configure ->
 
 expressServer.get "/", (req, res, next) ->
 	dbapp.requesttoken (status, request_token) ->
-		res.redirect "https://www.dropbox.com/1/oauth/authorize?oauth_token=#{token.oauth_token}"
 		res.redirect url.format
 			protocol: "http"
 			host: process.env.MY_HOSTNAME
