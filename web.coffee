@@ -16,7 +16,7 @@ dbapp = dbox.app
 	app_key: process.env.DB_KEY
 	app_secret: process.env.DB_SECRET
 
-expressServer = express.createServer()
+expressServer = express()
 expressServer.configure ->
 	expressServer.use express.bodyParser()
 	expressServer.use (req, res, next) ->
@@ -35,6 +35,8 @@ expressServer.get "/", (req, res, next) ->
 				oauth_token: request_token.oauth_token
 				oauth_callback: "http://#{process.env.MY_HOSTNAME}"
 
+server = http.createServer(expressServer)
+
 io = socket_io.listen server
 io.set "log level", 0
 io.sockets.on "connection", (socket) ->
@@ -44,4 +46,4 @@ io.sockets.on "connection", (socket) ->
 			socket.dbclient = dbapp.client access_token
 			callback()
 
-http.createServer(expressServer).listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
+server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
