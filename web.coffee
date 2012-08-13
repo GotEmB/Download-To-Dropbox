@@ -29,7 +29,8 @@ expressServer.get "/", (req, res, next) ->
 	dbapp.requesttoken (status, request_token) ->
 		res.redirect url.format
 			protocol: "http"
-			host: process.env.MY_HOSTNAME
+			host: "www.dropbox.com"
+			pathname: "/1/oauth/authorize"
 			query:
 				oauth_token: request_token.oauth_token
 				oauth_callback: "http://#{process.env.MY_HOSTNAME}"
