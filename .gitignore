@@ -8,6 +8,7 @@ lib-cov
 *.gz
 *.env
 *.DS_Store
+*.tmproj
 
 pids
 logs

@@ -1,1 +1,1 @@
-web: web.coffee
+web: iced web.coffee
