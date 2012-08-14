@@ -43,6 +43,7 @@ io.sockets.on "connection", (socket) ->
 	
 	socket.on "sync_info", (params, callback) ->
 		dbapp.accesstoken params.oauth_token, (status, access_token) ->
+			console.log status: status, access_token: access_token
 			socket.dbclient = dbapp.client access_token
 			socket.dbclient.account (status, info) ->
 				console.log status: status, info: info
