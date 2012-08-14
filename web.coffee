@@ -16,6 +16,8 @@ dbapp = dbox.app
 	app_key: process.env.DB_KEY
 	app_secret: process.env.DB_SECRET
 
+pendingRequestTokens = []
+
 expressServer = express()
 expressServer.configure ->
 	expressServer.use express.bodyParser()
@@ -27,6 +29,7 @@ expressServer.configure ->
 
 expressServer.get "/", (req, res, next) ->
 	dbapp.requesttoken (status, request_token) ->
+		pendingRequestTokens.push request_token
 		res.redirect url.format
 			protocol: "http"
 			host: "www.dropbox.com"
@@ -42,7 +45,8 @@ io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
 	socket.on "sync_info", (params, callback) ->
-		dbapp.accesstoken params.oauth_token, (status, access_token) ->
+		console.log request_token: _(pendingRequestTokens).select((x) -> x.oauth_token is params.oauth_token)[0]
+		dbapp.accesstoken _(pendingRequestTokens).select((x) -> x.oauth_token is params.oauth_token)[0], (status, access_token) ->
 			console.log status: status, access_token: access_token
 			socket.dbclient = dbapp.client access_token
 			socket.dbclient.account (status, info) ->
