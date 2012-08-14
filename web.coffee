@@ -38,12 +38,13 @@ expressServer.get "/", (req, res, next) ->
 server = http.createServer(expressServer)
 
 io = socket_io.listen server
-io.set "log level", 3
+io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
-	socket.on "request_token_authorized", (params, callback) ->
+	socket.on "sync_info", (params, callback) ->
 		dbapp.accesstoken params.oauth_token, (status, access_token) ->
 			socket.dbclient = dbapp.client access_token
-			callback()
+			socket.dbclient.account (status, info) ->
+				callback info
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"

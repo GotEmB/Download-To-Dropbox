@@ -5,15 +5,49 @@ html, body
 	width 100%
 	height 100%
 	background #cdd4dc url(bg.png)
+	margin 0
+	font-family Helvetica, Arial, sans-serif
+	overflow hidden
 
 #headerbar
 	position absolute
-	width 100%
-	height 70px
+	left -10px
+	right -10px
+	height 50px
+	background linear-gradient(top, #777 0%, #444 50%, #333 50%, #000 100)
+	box-shadow 0 0 1px black
+	font-weight 300
+	
+	#title
+		position absolute
+		margin 12px auto
+		width 100%
+		text-align center
+		font-size 26px
+		line-height 1
+		text-shadow 0 -1px 0 #374683
+		color white
+	
+	#displayname, #quotaused
+		position absolute
+		margin auto
+		right 0
+		top 0
+		padding-right 40px
+		font-size 14px
+		text-shadow 0 -1px 0 #374683
+		line-height 1
+		color white
+	
+	#displayname
+		padding-top 7px
+	
+	#quotaused
+		padding-top 29px
 
 #mainbox
 	position absolute
-	top 100px
+	top 80px
 	bottom 30px
 	left 30px
 	right 30px
