@@ -1,6 +1,6 @@
 setQuotaText = (quota_info) ->
-	used = Math.floor((quota_info.normal + quota_info.shared) / quota_info.quota * 1000) / 10
-	total = Math.floor(quota_info.quota / 1024 / 1024 / 1024 * 10) / 10
+	used = Math.round((quota_info.normal + quota_info.shared) / quota_info.quota * 1000) / 10
+	total = Math.round(quota_info.quota / 1024 / 1024 / 1024 * 10) / 10
 	$("#quotaused").text "#{used}% of #{total}GB used"
 
 $(document).ready ->
