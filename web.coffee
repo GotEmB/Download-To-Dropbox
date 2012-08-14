@@ -42,6 +42,7 @@ io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
 	socket.on "sync_info", (params, callback) ->
+		console.log params
 		dbapp.accesstoken params.oauth_token, (status, access_token) ->
 			socket.dbclient = dbapp.client access_token
 			socket.dbclient.account (status, info) ->
