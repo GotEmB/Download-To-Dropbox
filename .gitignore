@@ -10,6 +10,9 @@ lib-cov
 *.DS_Store
 *.tmproj
 
+lib/page.css
+lib/page.js
+
 pids
 logs
 results

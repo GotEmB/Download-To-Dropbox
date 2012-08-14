@@ -18,7 +18,7 @@ spawnProcess = (prc, args, verbose = true, callback = ->) ->
 build = (callback) ->
 	spawnProcess "iced", ["-c", "-o", "lib", "src"], false, (result) ->
 		return callback? false unless result
-		spawnProcess "stylus", ["src", "--out", "lib"], false, (result) ->
+		spawnProcess "stylus", ["src", "--out", "lib", "--use", "nib"], false, (result) ->
 			callback? result
 
 task "build", "build 'src/' to 'lib/'", ->
