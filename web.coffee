@@ -45,13 +45,16 @@ io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
 	socket.on "sync_info", (params, callback) ->
-		console.log request_token: _(pendingRequestTokens).select((x) -> x.oauth_token is params.oauth_token)[0]
-		dbapp.accesstoken _(pendingRequestTokens).select((x) -> x.oauth_token is params.oauth_token)[0], (status, access_token) ->
-			console.log status: status, access_token: access_token
+		request_token = _(pendingRequestTokens).select (x) -> x.oauth_token is params.oauth_token
+		return callback error: "Invalid Token" if request_token.length is 0
+		dbapp.accesstoken request_token[0], (status, access_token) ->
 			pendingRequestTokens = _(pendingRequestTokens).select (x) -> x.oauth_token isnt params.oauth_token
 			socket.dbclient = dbapp.client access_token
 			socket.dbclient.account (status, info) ->
-				console.log status: status, info: info
 				callback info
+	
+	socket.on "get_metadata", (path, callback) ->
+		socket.dbclient.metadata path, root: "dropbox", (status, data) ->
+			callback data
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
