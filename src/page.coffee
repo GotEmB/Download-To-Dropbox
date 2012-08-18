@@ -11,13 +11,13 @@ async = (a, b) ->
 
 asyncRepeat = (duration, interval, func) ->
 	started = Date.now()
-	sId = null
 	fu = ->
 		func()
 		if Date.now() - started >= duration
-			clearInterval sId 
-			func()
-	sId = setInterval fu, interval
+			setTimeout func, interval
+		else
+			setTimeout fu, interval
+	setTimeout fu, interval
 
 setQuotaText = (quota_info) ->
 	used = Math.round((quota_info.normal + quota_info.shared) / quota_info.quota * 1000) / 10
@@ -38,8 +38,7 @@ openDir = (path) ->
 			itemBox.click ->
 				columnBox.prevUntil().addClass "moveLeft"
 				columnsContainer.css width: 50 + columnsContainer.children("div:not(div.moveLeft)").length * 330
-				async 500, ->
-					columnBox.prevUntil().remove()
+				async 500, -> columnBox.prevUntil().remove()
 				columnBox_inner.children().removeClass "selected"
 				itemBox.addClass "selected"
 				openDir item.path if item.is_dir
@@ -48,8 +47,10 @@ openDir = (path) ->
 		columnBox.prependTo columnsContainer
 		async 25, ->
 			columnBox.removeClass "moveLeft"
+			startWidth = columnsContainer.width()
+			startLeft = $("#mainbox").scrollLeft()
 			columnsContainer.css width: 50 + columnsContainer.children().length * 330
-			async 500, -> $("#mainbox").scrollTo top: 0, left: columnsContainer.css("width"), 500 if columnsContainer.css("width") >= $("#mainbox").css "width"
+			asyncRepeat 600, 1, -> $("#mainbox").scrollLeft startLeft + columnsContainer.width() - startWidth if columnsContainer.css("width") >= $("#mainbox").css "width"
 
 $(document).ready ->
 	socket = io.connect()
