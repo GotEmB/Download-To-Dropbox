@@ -43,6 +43,15 @@ openDir = (path) ->
 				itemBox.addClass "selected"
 				openDir item.path if item.is_dir
 			columnBox_inner.append itemBox
+		uploadBox = $ "<div/>", class: "itembox uploadbox"
+		uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
+		uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
+			.keypress (e) ->
+				return if e.which isnt 13
+				e.preventDefault();
+				console.log "Download: #{$(this).text()}"
+				socket.emit "downloadtodropbox", $(this).text(), "/afile"
+		uploadBox.appendTo columnBox_inner
 		columnBox.css marginLeft: 30 + columnsContainer.children().length * 330
 		columnBox.prependTo columnsContainer
 		async 25, ->

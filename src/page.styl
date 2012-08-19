@@ -15,7 +15,7 @@ body
 		left -50px
 		right -50px
 		height 50px
-		background linear-gradient(top, rgba(215,222,230,0.5) 0%, rgba(195,202,210,0.5) 70%, rgba(182,189,197,0.5) 100%)
+		background linear-gradient(top, rgba(215, 222, 230, 0.5) 0%, rgba(195, 202, 210, 0.5) 60%, rgba(182, 189, 197, 0.5) 90%, rgba(175, 182, 190, 0.5) 100%)
 		box-shadow 0 0 4px #4d545c
 	
 		#title
@@ -110,7 +110,7 @@ body
 							border-top solid 1px rgba(77, 84, 92, 0.3)
 						
 						&.selected
-							background #23619e //#8d949c
+							background #23619e
 							border-bottom solid 1px rgba(77, 84, 92, 0.5)
 							border-top solid 1px rgba(77, 84, 92, 0.5)
 							color white
@@ -135,3 +135,16 @@ body
 							white-space nowrap
 							width 250px
 							left 50px
+					
+					div.uploadbox
+						display none
+						
+						div.item_text
+							width 235px;
+							text-overflow clip;
+							border solid 1px rgba(77, 84, 92, 0.5)
+							padding 4px
+							margin 13px -4px
+					
+				&:hover div.columnbox_inner div.uploadbox
+					display block

@@ -5,6 +5,8 @@ mongoose = require "mongoose"
 request = require "request"
 url = require "url"
 dbox = require "dbox"
+fs = require "fs"
+md5 = require "MD5"
 {spawn} = require "child_process"
 _ = require "underscore"
 
@@ -12,11 +14,13 @@ cp = spawn "cake", ["build"]
 await cp.on "exit", defer code
 return console.log "Build failed! Run 'cake build' to display build errors." if code isnt 0
 
+pendingRequestTokens = []
+currentDownloads = []
+
 dbapp = dbox.app
 	app_key: process.env.DB_KEY
 	app_secret: process.env.DB_SECRET
-
-pendingRequestTokens = []
+	root: "dropbox"
 
 expressServer = express()
 expressServer.configure ->
@@ -54,7 +58,27 @@ io.sockets.on "connection", (socket) ->
 				callback info
 	
 	socket.on "get_metadata", (path, callback) ->
-		socket.dbclient.metadata path, root: "dropbox", (status, data) ->
+		socket.dbclient.metadata path, (status, data) ->
 			callback data
+	
+	socket.on "downloadtodropbox", (url, path) ->
+		console.log "Start"
+		socket.dbclient.put "Cakefile", fs.readFileSync("Cakefile"), (e, r) ->
+			console.log e: e, r: r
+			console.log "Done"
+		# sock.on "drain", -> console.log arguments: arguments
+		# sock.on "error", -> console.log error: arguments
+		return
+		try fs.statSync "dlcache" catch e then fs.mkdirSync "dlcache"
+		filehash = md5 url + Date.now() until filehash? and !_(currentDownloads).any (x) -> x is filehash
+		currentDownloads.push filehash
+		dlf = fs.createWriteStream "dlcache/#{filehash}", flags: "a", encoding: null
+		dlr = request.get url
+		dlr.on "response", (res) ->
+			console.log "Download Size: #{res.headers["content-length"]} bytes."
+			dlr.on "data", (chunk) -> dlf.write chunk
+			dlr.on "end", ->
+				console.log "Download complete."
+				dlf.end()
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
