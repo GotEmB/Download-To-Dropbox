@@ -60,16 +60,46 @@ class Client
 			url: "https://api.dropbox.com/1/account/info"
 			method: "GET"
 			headers: Authorization: oauthHeader
-		request req, (err, res, body) => callback JSON.parse body
+		request req, (err, res, body) -> callback JSON.parse body
 	getMetaData: (path, callback) ->
 		req =
-			url = "https://api.dropbox.com/1/metadata/#{@app.root}/#{path}"
+			url: "https://api.dropbox.com/1/metadata/#{@app.root}/#{path}"
 			method: "GET"
 			headers: Authorization: oauthHeader
-		request req, (err, res, body) => callback JSON.parse body
-	pipeFile: (url, path) ->
-		fifo = []
+		request req, (err, res, body) -> callback JSON.parse body
+	pipeFile: ([url, path, replace]..., callback) ->
+		uploadedChunkSize = 0
 		srcrequest = request.get url
-		srcrequest.on "data"
+		dstrequest = request
+			url: "https://api-content.dropbox.com/1/chunked_upload"
+			method: "PUT"
+			headers: Authorization: oauthHeader
+		srcrequest.on "data", (data) ->
+			doStuff = ->
+				dstrequest.write data
+				uploadedChunkSize += data.length
+			if uploadedChunkSize + data.length > 10 * 1024 * 1024
+				dstrequest.once "response", (response) ->
+					body = JSON.parse response.body
+					dstrequest = request
+						url: "https://api-content.dropbox.com/1/chunked_upload?#{qs.stringify upload_id: body.upload_id, offset: body.offset}"
+						method: "PUT"
+						headers: Authorization: oauthHeader
+					doStuff()
+					srcrequest.resume()
+				dstrequest.end()
+				srcrequest.pause()
+				uploadedChunkSize = 0
+			else
+				doStuff()
+		srcrequest.on "end", ->
+			dstrequest.once "response", ({body}) ->
+				dstrequest = request
+					url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
+					method: "POST"
+					headers: Authorization: oauthHeader
+					body: upload_id: JSON.parse(body).upload_id
+				dstrequest.on "response", (response) -> callback JSON.parse response.body()
+			dstrequest.end()
 
 exports.app = App
