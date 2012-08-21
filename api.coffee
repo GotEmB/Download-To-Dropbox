@@ -67,8 +67,8 @@ class Client
 			method: "GET"
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
-	pipeFile: ([url, path, replace]..., callback) ->
-		(request.head url).on "response", (response) ->
+	pipeFile: ([url, path, replace]..., callback) =>
+		(request.head url).on "response", (response) =>
 			fileSize = response.headers['content-length']
 			console.log fileSize: fileSize
 			
@@ -101,8 +101,8 @@ class Client
 					console.log uplink: "Closed"
 				else
 					doStuff()
-			srcrequest.once "end", ->
-				dstrequest.once "response", ({body}) ->
+			srcrequest.once "end", =>
+				dstrequest.once "response", ({body}) =>
 					dstrequest = request
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
