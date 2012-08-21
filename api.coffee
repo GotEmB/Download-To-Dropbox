@@ -108,10 +108,10 @@ class Client
 						method: "POST"
 						headers: Authorization: oauthHeader
 						body: upload_id: JSON.parse(body).upload_id
-					console.log responseBody: JSON.parse body
+					console.log uplink: "Uploaded", responseBody: JSON.parse body
 					dstrequest.once "response", (response) ->
-						callback JSON.parse response.body()
-						console.log uplink: "Commited Upload"
+						callback JSON.parse response.body
+						console.log uplink: "Commited Upload", responseBody: JSON.parse response.body
 				dstrequest.end()
 				console.log downlink: "EOF"
 
