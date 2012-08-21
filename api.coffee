@@ -68,38 +68,51 @@ class Client
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) ->
-		uploadedChunkSize = 0
-		srcrequest = request.get url
-		dstrequest = request
-			url: "https://api-content.dropbox.com/1/chunked_upload"
-			method: "PUT"
-			headers: Authorization: oauthHeader
-		srcrequest.on "data", (data) ->
-			doStuff = ->
-				dstrequest.write data
-				uploadedChunkSize += data.length
-			if uploadedChunkSize + data.length > 10 * 1024 * 1024
-				dstrequest.once "response", (response) ->
-					body = JSON.parse response.body
-					dstrequest = request
-						url: "https://api-content.dropbox.com/1/chunked_upload?#{qs.stringify upload_id: body.upload_id, offset: body.offset}"
-						method: "PUT"
-						headers: Authorization: oauthHeader
+		(request.head url).on "response", (response) ->
+			fileSize = response.headers['content-length']
+			console.log fileSize: fileSize
+			
+			uploadedSize = 0
+			uploadedChunkSize = 0
+			srcrequest = request.get url
+			dstrequest = request
+				url: "https://api-content.dropbox.com/1/chunked_upload"
+				method: "PUT"
+				headers: Authorization: oauthHeader
+			srcrequest.on "data", (data) ->
+				doStuff = ->
+					dstrequest.write data
+					uploadedChunkSize += data.length
+					uploadedSize += data.length
+					console.log progress: "#{uploadedSize / fileSize * 100}%"
+				if uploadedChunkSize + data.length > 10 * 1024 * 1024
+					dstrequest.once "response", (response) ->
+						body = JSON.parse response.body
+						dstrequest = request
+							url: "https://api-content.dropbox.com/1/chunked_upload?#{qs.stringify upload_id: body.upload_id, offset: body.offset}"
+							method: "PUT"
+							headers: Authorization: oauthHeader
+						console.log uplink "Opened"
+						doStuff()
+						srcrequest.resume()
+					dstrequest.end()
+					srcrequest.pause()
+					uploadedChunkSize = 0
+					console.log uplink: "Closed"
+				else
 					doStuff()
-					srcrequest.resume()
+			srcrequest.once "end", ->
+				dstrequest.once "response", ({body}) ->
+					dstrequest = request
+						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
+						method: "POST"
+						headers: Authorization: oauthHeader
+						body: upload_id: JSON.parse(body).upload_id
+					console.log responseBody: JSON.parse body
+					dstrequest.once "response", (response) ->
+						callback JSON.parse response.body()
+						console.log uplink: "Commited Upload"
 				dstrequest.end()
-				srcrequest.pause()
-				uploadedChunkSize = 0
-			else
-				doStuff()
-		srcrequest.on "end", ->
-			dstrequest.once "response", ({body}) ->
-				dstrequest = request
-					url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
-					method: "POST"
-					headers: Authorization: oauthHeader
-					body: upload_id: JSON.parse(body).upload_id
-				dstrequest.on "response", (response) -> callback JSON.parse response.body()
-			dstrequest.end()
+				console.log downlink: "EOF"
 
 exports.app = App
