@@ -79,12 +79,14 @@ class Client
 				url: "https://api-content.dropbox.com/1/chunked_upload"
 				method: "PUT"
 				headers: Authorization: oauthHeader
+			dstrequest.on "data", (data) -> console.log immatureData: data.toString()
+			dstrequest.on "end", (data) -> console.log immatureData: if data? then data.toString() else ""
 			srcrequest.on "data", (data) ->
 				doStuff = ->
 					dstrequest.write data
 					uploadedChunkSize += data.length
 					uploadedSize += data.length
-					console.log progress: "#{uploadedSize / fileSize * 100}%"
+					console.log progress: "#{uploadedSize / fileSize * 100}%", data: data.toString()
 				if uploadedChunkSize + data.length > 10 * 1024 * 1024
 					dstrequest.on "response", (response) ->
 						body = JSON.parse response.body
@@ -102,11 +104,11 @@ class Client
 				else
 					doStuff()
 			srcrequest.on "end", =>
-				dstrequest.on "response", (response) => console.log response: response
-				dstrequest.on "data", (data) => console.log data: data.toString()
-				dstrequest.on "end", -> console.log end: arguments
-				dstrequest.on "complete", (response, body) =>
-					console.log uplink: "Uploaded", response: response
+				body = ""
+				dstrequest.on "data", (chunk) => body += chunk
+				dstrequest.on "end", (chunk) =>
+					body += chunk ? ""
+					console.log uplink: "Uploaded", body: body
 					dstrequest = request
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
