@@ -102,16 +102,16 @@ class Client
 				else
 					doStuff()
 			srcrequest.once "end", =>
-				dstrequest.once "response", ({body}) =>
+				dstrequest.once "response", (response) =>
+					console.log uplink: "Uploaded", responseBody: body
 					dstrequest = request
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
 						headers: Authorization: oauthHeader
-						body: upload_id: JSON.parse(body).upload_id
-					console.log uplink: "Uploaded", responseBody: JSON.parse body
+						body: upload_id: JSON.parse(response.body).upload_id
 					dstrequest.once "response", (response) ->
+						console.log uplink: "Commited Upload", responseBody: JSON.parse body
 						callback JSON.parse response.body
-						console.log uplink: "Commited Upload", responseBody: JSON.parse response.body
 				dstrequest.end()
 				console.log downlink: "EOF"
 
