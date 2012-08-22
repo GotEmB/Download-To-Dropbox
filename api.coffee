@@ -118,7 +118,7 @@ class Client
 						json: true
 					request req, (err, res, body) ->
 						console.log pipeFile: "Commited upload"
-						callback JSON.parse body
+						callback body
 				bufferData data if data?
 				if uploaded.chunk isnt 0
 					uploadChunk commitUpload
