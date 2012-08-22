@@ -105,7 +105,7 @@ class Client
 				else
 					srcRequest.pause()
 					uploadChunk ->
-						bufferData()
+						bufferData data
 						srcRequest.resume()
 			srcRequest.once "end", (data) =>
 				srcRequest.removeAllListeners "data"
