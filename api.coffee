@@ -114,8 +114,7 @@ class Client
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
 						headers: Authorization: oauthHeader
-						body: upload_id: prevResBody.upload_id
-						json: true
+						json: upload_id: prevResBody.upload_id
 					request req, (err, res, body) ->
 						console.log pipeFile: "Commited upload"
 						callback body
