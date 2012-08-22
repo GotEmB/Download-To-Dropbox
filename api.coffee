@@ -115,6 +115,7 @@ class Client
 						method: "POST"
 						headers: Authorization: oauthHeader
 						body: upload_id: prevResBody.upload_id
+						json: true
 					request req, (err, res, body) ->
 						console.log pipeFile: "Commited upload"
 						callback JSON.parse body
