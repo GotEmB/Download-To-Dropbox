@@ -1,5 +1,6 @@
 request = require "request"
 qs = require "querystring"
+http = require "http"
 
 headerify = (obj) ->
 	str = "#{obj.title}"
@@ -77,8 +78,19 @@ class Client
 			srcrequest = request.get url
 			dstrequest = request
 				url: "https://api-content.dropbox.com/1/chunked_upload"
+			#	url: "http://localhost:4998/1/chunked_upload"
+				method: "PUT"
+				headers:
+					Authorization: oauthHeader
+					"Content-Length": if fileSize < 10 * 1024 * 1024
+			###
+			dstrequest = http.request
+				host: "localhost"
+				port: 4998
+				path: "/1/chunked_upload"
 				method: "PUT"
 				headers: Authorization: oauthHeader
+			###
 			dstrequest.on "data", (data) -> console.log immatureData: data.toString()
 			dstrequest.on "end", (data) -> console.log immatureData: if data? then data.toString() else ""
 			srcrequest.on "data", (data) ->
