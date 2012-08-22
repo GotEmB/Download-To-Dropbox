@@ -69,7 +69,7 @@ class Client
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
-		maxChunkSize = 4 * 1024 * 1024
+		maxChunkSize = 50 * 1024 * 1024
 		fileSize = null
 		srcRequest = request.get url
 		srcRequest.once "response", (response) =>
