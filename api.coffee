@@ -1,6 +1,7 @@
 request = require "request"
 qs = require "querystring"
 http = require "http"
+events = require "events"
 
 headerify = (obj) ->
 	str = "#{obj.title}"
@@ -14,7 +15,7 @@ headerify = (obj) ->
 
 class App
 	constructor: (opts) ->
-		throw error: "app_key and app_secret are mandatory." if !opts? or !opts.app_key? or !opts.app_secret?
+		throw new Error "app_key and app_secret are mandatory." if !opts? or !opts.app_key? or !opts.app_secret?
 		@app_key = opts.app_key
 		@app_secret = opts.app_secret
 		@root = opts.root ? "sandbox"
@@ -62,18 +63,20 @@ class Client
 			method: "GET"
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
-	getMetaData: (path, callback) ->
+	getMetadata: (path, callback) ->
 		req =
 			url: "https://api.dropbox.com/1/metadata/#{@app.root}/#{path}"
 			method: "GET"
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
+		ret = new events.Emitter()
 		maxChunkSize = 50 * 1024 * 1024
 		fileSize = null
 		srcRequest = request.get url
 		srcRequest.once "response", (response) =>
 			fileSize = response.headers['content-length']
+			ret.fileSize = fileSize
 			bufferQueue = []
 			uploaded =
 				total: 0
@@ -93,7 +96,7 @@ class Client
 					prevResBody = JSON.parse body
 					uploaded.chunk = 0
 					bufferQueue = []
-					console.log uploaded: "#{uploaded.total / fileSize * 100}%"
+					ret.emit "progress", percent: uploaded.total / fileSize * 100, bytes: uploaded.total
 					callback?()
 			bufferData = (data) ->
 				bufferQueue.push data
@@ -116,12 +119,16 @@ class Client
 						headers: Authorization: oauthHeader
 						form: upload_id: prevResBody.upload_id
 					request req, (err, res, body) ->
-						console.log pipeFile: "Commited upload"
-						callback body
+						body = JSON.parse body
+						ret.emit "complete", body
+						callback? body
+						ret.removeAllHandlers "progress"
+						ret.removeAllHandlers "complete"
 				bufferData data if data?
 				if uploaded.chunk isnt 0
 					uploadChunk commitUpload
 				else
 					commitUpload()
+		ret
 
-exports.app = App
+exports.createApp = (opts) -> new App opts

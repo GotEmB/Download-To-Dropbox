@@ -24,6 +24,21 @@ setQuotaText = (quota_info) ->
 	total = Math.round(quota_info.quota / 1024 / 1024 / 1024 * 10) / 10
 	$("#quotaused").text "#{used}% of #{total}GB used"
 
+friendlySize = (bytes) ->
+	exp = 0
+	until bytes / 1024 <= 1
+		bytes /= 1024
+		exp++
+	bytes = Math.round(bytes * 100) / 100
+	suffix = switch exp
+		when 0 then "bytes"
+		when 1 then "KB"
+		when 2 then "MB"
+		when 3 then "GB"
+		when 4 then "TB"
+		else "1024 ^ #{exp} bytes"
+	"#{bytes} #{suffix}"
+
 openDir = (path) ->
 	columnsContainer = $ "#columnscontainer"
 	socket.emit "get_metadata", path, (data) ->
@@ -43,15 +58,26 @@ openDir = (path) ->
 				itemBox.addClass "selected"
 				openDir item.path if item.is_dir
 			columnBox_inner.append itemBox
-		uploadBox = $ "<div/>", class: "itembox uploadbox"
-		uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
-		uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
-			.keypress (e) ->
-				return if e.which isnt 13
-				e.preventDefault();
-				console.log "Download: #{$(this).text()}"
-				socket.emit "downloadtodropbox", $(this).text(), "/afile"
-		uploadBox.appendTo columnBox_inner
+		do ->
+			uploadBox = $ "<div/>", class: "itembox uploadbox"
+			uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
+			uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
+				.keypress (e) ->
+					return if e.which isnt 13
+					e.preventDefault();
+					console.log "Download: #{$(this).text()}"
+					socket.emit "downloadtodropbox", $(this).text(), "/afile", (info) ->
+						$(this).remove()
+						progressBar = $ "<div/>", class: "item_progressbar_back"
+						progressBar.append $ "<div/>", class: "item_progressbar_front"
+						progressBar.appendTo uploadBox
+						socket.on "progress_#{info.hash}", (progress) ->
+							progressBar.children("div").css width: "#{progress.percent}%"
+							progressBar.children("div").attr title: "#{progress.percent}% (#{readableSize progress.bytes} of #{readableSize info.fileSize})"
+						socket.once "complete_#{info.hash}", (info) ->
+							# continue...
+							
+			uploadBox.appendTo columnBox_inner
 		columnBox.css marginLeft: 30 + columnsContainer.children().length * 330
 		columnBox.prependTo columnsContainer
 		async 25, ->
