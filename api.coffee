@@ -77,12 +77,11 @@ class Client
 			uploadedChunkSize = 0
 			srcrequest = request.get url
 			dstrequest = request
-				url: "https://api-content.dropbox.com/1/chunked_upload"
-			#	url: "http://localhost:4998/1/chunked_upload"
+			#	url: "https://api-content.dropbox.com/1/chunked_upload"
+				url: "http://localhost:4998/1/chunked_upload"
 				method: "PUT"
-				headers:
-					Authorization: oauthHeader
-					"Content-Length": if fileSize < 10 * 1024 * 1024
+				headers: Authorization: oauthHeader
+				endOnTick: false
 			###
 			dstrequest = http.request
 				host: "localhost"
@@ -98,7 +97,7 @@ class Client
 					dstrequest.write data
 					uploadedChunkSize += data.length
 					uploadedSize += data.length
-					console.log progress: "#{uploadedSize / fileSize * 100}%", data: data.toString()
+					console.log progress: "#{uploadedSize / fileSize * 100}%"
 				if uploadedChunkSize + data.length > 10 * 1024 * 1024
 					dstrequest.on "response", (response) ->
 						body = JSON.parse response.body
