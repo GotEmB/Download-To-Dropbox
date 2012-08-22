@@ -91,15 +91,22 @@ class Client
 					body: bufferQueue
 				request req, (err, res, body) ->
 					prevResBody = JSON.parse body
-					console.log progress: "#{uploaded.total / fileSize * 100}%"
+					uploaded.chunk = 0
+					bufferQueue = []
+					console.log uploaded: "#{uploaded.total / fileSize * 100}%"
 					callback?()
+			bufferData = (data) ->
+				bufferQueue.push data
+				uploaded[i] += data.length for i of uploaded
+				console.log downloaded: "#{uploaded.total / fileSize * 100}%"
 			srcRequest.on "data", (data) ->
 				if uploaded.chunk + data.length <= maxChunkSize
-					bufferQueue.push data
-					uploaded[i] += 50 for i of uploaded
-					return
-				srcRequest.pause()
-				uploadChunk -> srcRequest.resume()
+					bufferData data
+				else
+					srcRequest.pause()
+					uploadChunk ->
+						bufferData()
+						srcRequest.resume()
 			srcRequest.once "end", (data) =>
 				srcRequest.removeAllListeners "data"
 				commitUpload = =>
@@ -107,11 +114,12 @@ class Client
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
 						headers: Authorization: oauthHeader
-						body: upload_id: JSON.parse(body).upload_id
+						body: upload_id: prevResBody.upload_id
 					request req, (err, res, body) ->
 						console.log pipeFile: "Commited upload"
 						callback JSON.parse body
-				if data?
+				bufferData data if data?
+				if uploaded.chunk isnt 0
 					uploadChunk commitUpload
 				else
 					commitUpload()
