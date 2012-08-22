@@ -77,8 +77,8 @@ class Client
 			uploadedChunkSize = 0
 			srcrequest = request.get url
 			dstrequest = request
-			#	url: "https://api-content.dropbox.com/1/chunked_upload"
-				url: "http://localhost:4998/1/chunked_upload"
+				url: "https://api-content.dropbox.com/1/chunked_upload"
+			#	url: "http://localhost:4998/1/chunked_upload"
 				method: "PUT"
 				headers: Authorization: oauthHeader
 				endOnTick: false
