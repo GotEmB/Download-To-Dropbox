@@ -69,66 +69,51 @@ class Client
 			headers: Authorization: oauthHeader
 		request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
-		(request.head url).on "response", (response) =>
+		maxChunkSize = 4 * 1024 * 1024
+		fileSize = null
+		srcRequest = request.get url
+		srcRequest.once "response", (response) =>
 			fileSize = response.headers['content-length']
-			console.log fileSize: fileSize
-			
-			uploadedSize = 0
-			uploadedChunkSize = 0
-			srcrequest = request.get url
-			dstrequest = request
-				url: "https://api-content.dropbox.com/1/chunked_upload"
-			#	url: "http://localhost:4998/1/chunked_upload"
-				method: "PUT"
-				headers: Authorization: oauthHeader
-				endOnTick: false
-			###
-			dstrequest = http.request
-				host: "localhost"
-				port: 4998
-				path: "/1/chunked_upload"
-				method: "PUT"
-				headers: Authorization: oauthHeader
-			###
-			dstrequest.on "data", (data) -> console.log immatureData: data.toString()
-			dstrequest.on "end", (data) -> console.log immatureData: if data? then data.toString() else ""
-			srcrequest.on "data", (data) ->
-				doStuff = ->
-					dstrequest.write data
-					uploadedChunkSize += data.length
-					uploadedSize += data.length
-					console.log progress: "#{uploadedSize / fileSize * 100}%"
-				if uploadedChunkSize + data.length > 10 * 1024 * 1024
-					dstrequest.on "response", (response) ->
-						body = JSON.parse response.body
-						dstrequest = request
-							url: "https://api-content.dropbox.com/1/chunked_upload?#{qs.stringify upload_id: body.upload_id, offset: body.offset}"
-							method: "PUT"
-							headers: Authorization: oauthHeader
-						console.log uplink "Opened"
-						doStuff()
-						srcrequest.resume()
-					dstrequest.end()
-					srcrequest.pause()
-					uploadedChunkSize = 0
-					console.log uplink: "Closed"
-				else
-					doStuff()
-			srcrequest.on "end", =>
-				body = ""
-				dstrequest.on "data", (chunk) => body += chunk
-				dstrequest.on "end", (chunk) =>
-					body += chunk ? ""
-					console.log uplink: "Uploaded", body: body
-					dstrequest = request
+			bufferQueue = []
+			uploaded =
+				total: 0
+				chunk: 0
+			prevResBody = null
+			uploadChunk = (callback) ->
+				req =
+					url: "https://api-content.dropbox.com/1/chunked_upload?" +
+						if prevResBody? then qs.stringify
+							upload_id: prevResBody.upload_id
+							offset: prevResBody.offset
+						else ""
+					method: "PUT"
+					headers: Authorization: oauthHeader
+					body: bufferQueue
+				request req, (err, res, body) ->
+					prevResBody = JSON.parse body
+					console.log progress: "#{uploaded.total / fileSize * 100}%"
+					callback?()
+			srcRequest.on "data", (data) ->
+				if uploaded.chunk + data.length <= maxChunkSize
+					bufferQueue.push data
+					uploaded[i] += 50 for i of uploaded
+					return
+				srcRequest.pause()
+				uploadChunk -> srcRequest.resume()
+			srcRequest.once "end", (data) =>
+				srcRequest.removeAllListeners "data"
+				commitUpload = =>
+					req =
 						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
 						headers: Authorization: oauthHeader
 						body: upload_id: JSON.parse(body).upload_id
-					dstrequest.on "complete", (response, body) ->
-						console.log uplink: "Commited Upload", response: response
+					request req, (err, res, body) ->
+						console.log pipeFile: "Commited upload"
 						callback JSON.parse body
-				dstrequest.end()
-				console.log downlink: "EOF"
+				if data?
+					uploadChunk commitUpload
+				else
+					commitUpload()
 
 exports.app = App
