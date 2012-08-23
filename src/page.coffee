@@ -36,7 +36,7 @@ friendlySize = (bytes) ->
 		when 2 then "MB"
 		when 3 then "GB"
 		when 4 then "TB"
-		else "1024 ^ #{exp} bytes"
+		else "x1024^#{exp} bytes"
 	"#{bytes} #{suffix}"
 
 openDir = (path) ->
@@ -46,7 +46,7 @@ openDir = (path) ->
 		columnBox_inner = $ "<div/>", class: "columnbox_inner"
 		columnBox.append columnBox_inner
 		columnBox_inner.append $ "<div/>", class: "column_inback"
-		data.contents.forEach (item) ->
+		newItemBox = (item, insert) ->
 			itemBox = $ "<div/>", class: "itembox"
 			itemBox.append $ "<div/>", class: "item_image sprite_web #{if item.is_dir then "s_web_folder_32" else "s_web_page_white_32"}"
 			itemBox.append $ "<div/>", class: "item_text", text: _(item.path.split "/").last()
@@ -57,26 +57,32 @@ openDir = (path) ->
 				columnBox_inner.children().removeClass "selected"
 				itemBox.addClass "selected"
 				openDir item.path if item.is_dir
-			columnBox_inner.append itemBox
+			if insert is true
+				itemBox.insertBefore columnBox_inner.children("div.uploadbox")
+			else
+				columnBox_inner.append itemBox
+		data.contents.forEach newItemBox
 		do ->
 			uploadBox = $ "<div/>", class: "itembox uploadbox"
 			uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
 			uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
 				.keypress (e) ->
 					return if e.which isnt 13
-					e.preventDefault();
-					console.log "Download: #{$(this).text()}"
-					socket.emit "downloadtodropbox", $(this).text(), "/afile", (info) ->
-						$(this).remove()
+					e.preventDefault()
+					socket.emit "downloadtodropbox", $(@).text(), "apath", (info) ->
+						uploadBox.children("div.item_text").text "http://"
+						itemBox = $ "<div/>", class: "itembox"
+						itemBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"
 						progressBar = $ "<div/>", class: "item_progressbar_back"
 						progressBar.append $ "<div/>", class: "item_progressbar_front"
-						progressBar.appendTo uploadBox
+						progressBar.appendTo itemBox
+						itemBox.insertBefore columnBox_inner.children("div.uploadbox")
 						socket.on "progress_#{info.hash}", (progress) ->
 							progressBar.children("div").css width: "#{progress.percent}%"
-							progressBar.children("div").attr title: "#{progress.percent}% (#{readableSize progress.bytes} of #{readableSize info.fileSize})"
+							progressBar.children("div").attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
 						socket.once "complete_#{info.hash}", (info) ->
-							# continue...
-							
+							itemBox.remove()
+							newItemBox info, true
 			uploadBox.appendTo columnBox_inner
 		columnBox.css marginLeft: 30 + columnsContainer.children().length * 330
 		columnBox.prependTo columnsContainer

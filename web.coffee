@@ -57,14 +57,18 @@ io.sockets.on "connection", (socket) ->
 		socket.dbclient.getMetadata path, (meta) ->
 			callback meta
 	
-	socket.on "downloadtodropbox", (url, path, replace, callback) ->
+	socket.on "downloadtodropbox", ([url, path, replace]..., callback) ->
+		lastProgress = Date.now()
 		hash = md5 "#{url}%&$#{path}%&$#{Date.now().toString()}" until hash? and hash not of currentDownloads
 		currentDownloads[hash] = true
 		dld = socket.dbclient.pipeFile url, path, (meta) ->
 			socket.emit "complete_#{hash}", meta
 			delete currentDownloads[hash]
-		dld.on "progress", (percent, bytes) ->
-			socket.volatile.emit "progress_#{hash}", percent: percent, bytes: bytes
-		callback hash: hash, fileSize: dld.fileSize
+		dld.on "progress", ({percent, bytes}) ->
+			#if Date.now() - lastProgress > 500
+				socket.volatile.emit "progress_#{hash}", percent: percent, bytes: bytes
+				#lastProgress = Date.now()
+		dld.on "started", (fileSize) ->
+			callback hash: hash, fileSize: fileSize
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"

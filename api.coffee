@@ -2,6 +2,7 @@ request = require "request"
 qs = require "querystring"
 http = require "http"
 events = require "events"
+dns = require "dns"
 
 headerify = (obj) ->
 	str = "#{obj.title}"
@@ -32,18 +33,19 @@ class App
 		request req, (err, res, body) =>
 			request_token = qs.parse body
 			callback request_token.oauth_token, (callback) =>
-				req =
-					url: "https://api.dropbox.com/1/oauth/access_token"
-					method: "POST"
-					headers: Authorization: headerify
-						title: "OAuth"
-						oauth_version: "1.0"
-						oauth_signature_method: "PLAINTEXT"
-						oauth_consumer_key: @app_key
-						oauth_token: request_token.oauth_token
-						oauth_signature: "#{@app_secret}&#{request_token.oauth_token_secret}"
-				request req, (err, res, body) =>
-					callback new Client app: @, access_token: qs.parse body
+				dns.resolve "api.dropbox.com", (err, addr) =>
+					req =
+						url: "https://#{addr[0]}/1/oauth/access_token"
+						method: "POST"
+						headers: Authorization: headerify
+							title: "OAuth"
+							oauth_version: "1.0"
+							oauth_signature_method: "PLAINTEXT"
+							oauth_consumer_key: @app_key
+							oauth_token: request_token.oauth_token
+							oauth_signature: "#{@app_secret}&#{request_token.oauth_token_secret}"
+					request req, (err, res, body) =>
+						callback new Client app: @, access_token: qs.parse body
 
 class Client
 	oauthHeader = null
@@ -58,77 +60,80 @@ class Client
 			oauth_token: @access_token.oauth_token
 			oauth_signature: "#{@app.app_secret}&#{@access_token.oauth_token_secret}"
 	getAccountInfo: (callback) ->
-		req =
-			url: "https://api.dropbox.com/1/account/info"
-			method: "GET"
-			headers: Authorization: oauthHeader
-		request req, (err, res, body) -> callback JSON.parse body
-	getMetadata: (path, callback) ->
-		req =
-			url: "https://api.dropbox.com/1/metadata/#{@app.root}/#{path}"
-			method: "GET"
-			headers: Authorization: oauthHeader
-		request req, (err, res, body) -> callback JSON.parse body
+		dns.resolve "api.dropbox.com", (err, addr) ->
+			req =
+				url: "https://#{addr[0]}/1/account/info"
+				method: "GET"
+				headers: Authorization: oauthHeader
+			request req, (err, res, body) -> callback JSON.parse body
+	getMetadata: (path, callback) =>
+		dns.resolve "api.dropbox.com", (err, addr) =>
+			req =
+				url: "https://#{addr[0]}/1/metadata/#{@app.root}/#{path}"
+				method: "GET"
+				headers: Authorization: oauthHeader
+			request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
-		ret = new events.Emitter()
+		ret = new events.EventEmitter()
 		maxChunkSize = 50 * 1024 * 1024
 		fileSize = null
-		srcRequest = request.get url
-		srcRequest.once "response", (response) =>
-			fileSize = response.headers['content-length']
-			ret.fileSize = fileSize
-			bufferQueue = []
-			uploaded =
-				total: 0
-				chunk: 0
-			prevResBody = null
-			uploadChunk = (callback) ->
-				req =
-					url: "https://api-content.dropbox.com/1/chunked_upload?" +
-						if prevResBody? then qs.stringify
-							upload_id: prevResBody.upload_id
-							offset: prevResBody.offset
-						else ""
-					method: "PUT"
-					headers: Authorization: oauthHeader
-					body: bufferQueue
-				request req, (err, res, body) ->
-					prevResBody = JSON.parse body
-					uploaded.chunk = 0
-					bufferQueue = []
-					ret.emit "progress", percent: uploaded.total / fileSize * 100, bytes: uploaded.total
-					callback?()
-			bufferData = (data) ->
-				bufferQueue.push data
-				uploaded[i] += data.length for i of uploaded
-				console.log downloaded: "#{uploaded.total / fileSize * 100}%"
-			srcRequest.on "data", (data) ->
-				if uploaded.chunk + data.length <= maxChunkSize
-					bufferData data
-				else
-					srcRequest.pause()
-					uploadChunk ->
-						bufferData data
-						srcRequest.resume()
-			srcRequest.once "end", (data) =>
-				srcRequest.removeAllListeners "data"
-				commitUpload = =>
+		dns.resolve "api-content.dropbox.com", (err, addr) =>
+			getAddr = -> addr[Math.floor Math.random() * addr.length]
+			srcRequest = request.get url
+			srcRequest.once "response", (response) =>
+				fileSize = response.headers['content-length']
+				ret.fileSize = fileSize
+				ret.emit "started", fileSize
+				bufferQueue = []
+				uploaded =
+					total: 0
+					chunk: 0
+				prevResBody = null
+				uploadChunk = (callback) ->
 					req =
-						url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
-						method: "POST"
+						url: "https://#{getAddr()}/1/chunked_upload?" +
+							if prevResBody? then qs.stringify
+								upload_id: prevResBody.upload_id
+								offset: prevResBody.offset
+							else ""
+						method: "PUT"
 						headers: Authorization: oauthHeader
-						form: upload_id: prevResBody.upload_id
+						body: bufferQueue
 					request req, (err, res, body) ->
-						body = JSON.parse body
-						ret.emit "complete", body
-						callback? body
-						ret.removeAllHandlers "progress"
-						ret.removeAllHandlers "complete"
-				bufferData data if data?
-				if uploaded.chunk isnt 0
-					uploadChunk commitUpload
-				else
-					commitUpload()
+						prevResBody = JSON.parse body
+						uploaded.chunk = 0
+						bufferQueue = []
+						callback?()
+				bufferData = (data) ->
+					bufferQueue.push data
+					uploaded[i] += data.length for i of uploaded
+					ret.emit "progress", percent: uploaded.total / fileSize * 100, bytes: uploaded.total
+				srcRequest.on "data", (data) ->
+					if uploaded.chunk + data.length <= maxChunkSize
+						bufferData data
+					else
+						srcRequest.pause()
+						uploadChunk ->
+							bufferData data
+							srcRequest.resume()
+				srcRequest.once "end", (data) =>
+					srcRequest.removeAllListeners "data"
+					commitUpload = =>
+						req =
+							url: "https://#{getAddr()}/1/commit_chunked_upload/#{@app.root}/#{path}"
+							method: "POST"
+							headers: Authorization: oauthHeader
+							form: upload_id: prevResBody.upload_id
+						request req, (err, res, body) ->
+							body = JSON.parse body
+							ret.emit "complete", body
+							callback? body
+							ret.removeAllListeners()
+					bufferData data if data?
+					if uploaded.chunk isnt 0
+						uploadChunk commitUpload
+					else
+						commitUpload()
 		ret
 
 exports.createApp = (opts) -> new App opts
