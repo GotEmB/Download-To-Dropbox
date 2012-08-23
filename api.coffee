@@ -75,7 +75,7 @@ class Client
 			request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
 		ret = new events.EventEmitter()
-		maxChunkSize = 50 * 1024 * 1024
+		maxChunkSize = 4 * 1024 * 1024
 		fileSize = null
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
