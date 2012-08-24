@@ -101,7 +101,7 @@ class Client
 							Authorization: oauthHeader
 							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
 						endOnTick: false
-					dest = request req, (err, res, body) ->
+					dest = request req, (err, res, body) =>
 						prevRes
 						if uploaded.total < fileSize
 							oldDest = dest
