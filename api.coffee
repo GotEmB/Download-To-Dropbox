@@ -4,6 +4,8 @@ http = require "http"
 events = require "events"
 dns = require "dns"
 
+maxChunkSize = 100 * 1024 * 1024 # 100 MB
+
 headerify = (obj) ->
 	str = "#{obj.title}"
 	first = true
@@ -75,7 +77,6 @@ class Client
 			request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
 		ret = new events.EventEmitter()
-		maxChunkSize = 4 * 1024 * 1024
 		fileSize = null
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
@@ -85,10 +86,26 @@ class Client
 				ret.fileSize = fileSize
 				ret.emit "started", fileSize
 				bufferQueue = []
-				uploaded =
+				uploaded = 
 					total: 0
 					chunk: 0
 				prevResBody = null
+				
+				ChunkUpload = ->
+					req =
+						url: "https://#{getAddr()}/1/chunked_upload?" +
+							if prevResBody? then qs.stringify
+								upload_id: prevResBody.upload_id
+								offset: prevResBody.offset
+							else ""
+						method: "PUT"
+						headers: Authorization: oauthHeader
+					request req, (err, res, body) ->
+						prevResBody = JSON.parse body
+						
+				
+				
+				
 				uploadChunk = (callback) ->
 					req =
 						url: "https://#{getAddr()}/1/chunked_upload?" +
