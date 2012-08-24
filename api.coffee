@@ -79,6 +79,7 @@ class Client
 		ret = new events.EventEmitter()
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
+			emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total) / 100
 			src = request.get url
 			src.once "response", (response) =>
 				ret.fileSize = fileSize = response.headers['content-length']
@@ -123,6 +124,7 @@ class Client
 				src.on "data", (data) ->
 					if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
+						emitProgress()
 						unless dest.write data
 							src.pause()
 							dest.once "drain", -> src.resume()
@@ -130,9 +132,11 @@ class Client
 						src.pause()
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
+						emitProgress()
 						dest.end data[0 ... splitAt]
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
+							emitProgress()
 							unless dest.write data[splitAt ...]
 								dest.once "drain", -> src.resume()
 							else
@@ -140,10 +144,12 @@ class Client
 				src.on "end", (data) ->
 					if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
+						emitProgress()
 						dest.end data
 					else
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
+						emitProgress()
 						dest.end data[0 ... splitAt]
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
