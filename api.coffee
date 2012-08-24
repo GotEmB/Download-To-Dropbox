@@ -121,6 +121,7 @@ class Client
 								callback? body
 								ret.removeAllListeners()
 							dest.removeAllListeners()
+				newDest()
 				src.on "data", (data) ->
 					if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
