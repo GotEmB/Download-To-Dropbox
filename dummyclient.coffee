@@ -18,20 +18,24 @@ exports.req = req
 
 
 request = require "request"\
-src = request.get "http://appldnld.apple.com/QuickTime/041-4337.20120425.sxIv8/QuickTimeInstaller.exe"\
+src = request.get "http://appldnld.apple.com/iTunes10/041-6244.20120611.BbHi8/iTunes10.6.3.dmg"\
 dest = request.post\
     url: "https://api-content.dropbox.com/1/chunked_upload"\
     headers:\
         Authorization: 'OAuth oauth_version="1.0", oauth_signature_method="PLAINTEXT", oauth_consumer_key="pjmupsbonfxm97i", oauth_token="kmaf27vpc9bx48b", oauth_signature="4w7a9pzvx1arbxb&3bcx6vfaj6jf614"'\
-        'Content-Length': 20 * 1024 * 1024\
+        'Content-Length': 100 * 1024 * 1024\
     endOnTick: false\
     , -> console.log destDone: arguments\
 done = 0\
 src.on "data", (data) ->\
     done += data.length\
-    dest.write data\
-    console.log data: done\
+    unless dest.write data\
+        src.pause()\
+        console.log drain: done, memory: process.memoryUsage()\
+        dest.once "drain", -> src.resume()\
+    else\
+        console.log data: done, memory: process.memoryUsage()\
 src.on "end", (data) ->\
     done += data.length if data?\
     dest.end data\
-    console.log end: done
+    console.log end: done, memory: process.memoryUsage()

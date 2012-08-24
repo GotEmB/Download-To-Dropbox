@@ -77,80 +77,77 @@ class Client
 			request req, (err, res, body) -> callback JSON.parse body
 	pipeFile: ([url, path, replace]..., callback) =>
 		ret = new events.EventEmitter()
-		fileSize = null
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
-			srcRequest = request.get url
-			srcRequest.once "response", (response) =>
-				fileSize = response.headers['content-length']
-				ret.fileSize = fileSize
+			src = request.get url
+			src.once "response", (response) =>
+				ret.fileSize = fileSize = response.headers['content-length']
 				ret.emit "started", fileSize
-				bufferQueue = []
 				uploaded = 
 					total: 0
 					chunk: 0
-				prevResBody = null
-				
-				ChunkUpload = ->
+				prevRes = null
+				dest = null
+				newDest = ->
 					req =
 						url: "https://#{getAddr()}/1/chunked_upload?" +
-							if prevResBody? then qs.stringify
-								upload_id: prevResBody.upload_id
-								offset: prevResBody.offset
+							if prevRes? then qs.stringify
+								upload_id: prevRes.upload_id
+								offset: prevRes.offset
 							else ""
 						method: "PUT"
-						headers: Authorization: oauthHeader
-					request req, (err, res, body) ->
-						prevResBody = JSON.parse body
-						
-				
-				
-				
-				uploadChunk = (callback) ->
-					req =
-						url: "https://#{getAddr()}/1/chunked_upload?" +
-							if prevResBody? then qs.stringify
-								upload_id: prevResBody.upload_id
-								offset: prevResBody.offset
-							else ""
-						method: "PUT"
-						headers: Authorization: oauthHeader
-						body: bufferQueue
-					request req, (err, res, body) ->
-						prevResBody = JSON.parse body
-						uploaded.chunk = 0
-						bufferQueue = []
-						callback?()
-				bufferData = (data) ->
-					bufferQueue.push data
-					uploaded[i] += data.length for i of uploaded
-					ret.emit "progress", percent: uploaded.total / fileSize * 100, bytes: uploaded.total
-				srcRequest.on "data", (data) ->
+						headers:
+							Authorization: oauthHeader
+							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
+						endOnTick: false
+					dest = request req, (err, res, body) ->
+						prevRes
+						if uploaded.total < fileSize
+							oldDest = dest
+							newDest()
+							uploaded.chunk = 0
+							oldDest.emit "resurrected"
+							oldDest.removeAllListeners()
+						else
+							req =
+								url: "https://#{getAddr()}/1/commit_chunked_upload/#{@app.root}/#{path}"
+								method: "POST"
+								headers: Authorization: oauthHeader
+								form: upload_id: prevRes.upload_id
+							request req, (err, res, body) ->
+								body = JSON.parse body
+								ret.emit "complete", body
+								callback? body
+								ret.removeAllListeners()
+							dest.removeAllListeners()
+				src.on "data", (data) ->
 					if uploaded.chunk + data.length <= maxChunkSize
-						bufferData data
+						uploaded[i] += data.length for i of uploaded
+						unless dest.write data
+							src.pause()
+							dest.once "drain", -> src.resume()
 					else
-						srcRequest.pause()
-						uploadChunk ->
-							bufferData data
-							srcRequest.resume()
-				srcRequest.once "end", (data) =>
-					srcRequest.removeAllListeners "data"
-					commitUpload = =>
-						req =
-							url: "https://#{getAddr()}/1/commit_chunked_upload/#{@app.root}/#{path}"
-							method: "POST"
-							headers: Authorization: oauthHeader
-							form: upload_id: prevResBody.upload_id
-						request req, (err, res, body) ->
-							body = JSON.parse body
-							ret.emit "complete", body
-							callback? body
-							ret.removeAllListeners()
-					bufferData data if data?
-					if uploaded.chunk isnt 0
-						uploadChunk commitUpload
+						src.pause()
+						splitAt = maxChunkSize - uploaded.chunk
+						uploaded[i] += splitAt for i of uploaded
+						dest.end data[0 ... splitAt]
+						dest.once "resurrected", ->
+							uploaded[i] += data.length - splitAt for i of uploaded
+							unless dest.write data[splitAt ...]
+								dest.once "drain", -> src.resume()
+							else
+								src.resume()
+				src.on "end", (data) ->
+					if uploaded.chunk + data.length <= maxChunkSize
+						uploaded[i] += data.length for i of uploaded
+						dest.end data
 					else
-						commitUpload()
+						splitAt = maxChunkSize - uploaded.chunk
+						uploaded[i] += splitAt for i of uploaded
+						dest.end data[0 ... splitAt]
+						dest.once "resurrected", ->
+							uploaded[i] += data.length - splitAt for i of uploaded
+							dest.end data[splitAt ...]
 		ret
 
 exports.createApp = (opts) -> new App opts
