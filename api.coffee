@@ -86,7 +86,7 @@ class Client
 				uploaded = 
 					total: 0
 					chunk: 0
-				emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total) / 100
+				emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
 				prevRes = null
 				dest = null
 				newDest = ->
@@ -143,7 +143,9 @@ class Client
 							else
 								src.resume()
 				src.on "end", (data) ->
-					if uploaded.chunk + data.length <= maxChunkSize
+					unless data?
+						dest.end()
+					else if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
 						emitProgress()
 						dest.end data
