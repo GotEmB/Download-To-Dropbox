@@ -79,7 +79,6 @@ class Client
 		ret = new events.EventEmitter()
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
-			emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total) / 100
 			src = request.get url
 			src.once "response", (response) =>
 				ret.fileSize = fileSize = response.headers['content-length']
@@ -87,6 +86,7 @@ class Client
 				uploaded = 
 					total: 0
 					chunk: 0
+				emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total) / 100
 				prevRes = null
 				dest = null
 				newDest = ->
