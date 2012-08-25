@@ -77,6 +77,7 @@ class Client
 			request req, (err, res, body) -> callback JSON.parse body
 	simpleUpload: (src, path, replace, ret, getAddr, callback) =>
 		fileSize = ret.fileSize
+		ret.emit "started", fileSize
 		uploaded = 0
 		req =
 			url: "https://api-content.dropbox.com/1/files_put/#{@app.root}/#{path}"
@@ -102,6 +103,7 @@ class Client
 		emitProgress = (volatile = true) ->
 			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, volatile
 		fileSize = ret.fileSize
+		ret.emit "started", fileSize
 		uploaded = 0
 		uploadNextRange = ->
 			prevRes = null
