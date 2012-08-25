@@ -92,11 +92,13 @@ class Client
 			ret.emit "complete", meta
 			callback? meta
 		src.on "data", (data) ->
-			uploaded += ret.fileSize
+			uploaded += data.length
+			console.log uploaded: uploaded
 			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, true
 		src.end "data", (data) ->
 			if data?
-				uploaded += ret.fileSize
+				uploaded += data.length
+				console.log uploadOver: uploaded
 				ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, true
 		src.pipe dest
 	rangesChunk: (url, path, replace, ret, getAddr, callback) =>	
