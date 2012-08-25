@@ -143,12 +143,12 @@ class Client
 						try
 							body = JSON.parse body
 						catch ex
-							console.log body
+							console.log err: err, res: res, body: body
+							return
 							return @pipeFile url, path, replace, callback
 						ret.emit "complete", body
 						callback? body
 						ret.removeAllListeners()
-			src.on "response", console.log
 			src.on "data", (data) ->
 				uploaded += data.length
 				emitProgress()
