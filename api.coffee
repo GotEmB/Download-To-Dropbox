@@ -102,7 +102,7 @@ class Client
 		src.pipe dest
 	rangesChunk: (url, path, replace, ret, getAddr, callback) =>	
 		emitProgress = (volatile = true) ->
-			ret.emit if volatile then "progress" else "waiting", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
+			ret.emit (if volatile then "progress" else "waiting"), percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
@@ -167,7 +167,7 @@ class Client
 			total: 0
 			chunk: 0
 		emitProgress = (volatile = true) ->
-			ret.emit if volatile then "progress" else "waiting", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
+			ret.emit (if volatile then "progress" else "waiting"), percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
 		prevRes = null
 		dest = null
 		newDest = =>
