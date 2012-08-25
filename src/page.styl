@@ -1,5 +1,11 @@
 @import "nib"
 
+@keyframes rec
+	from
+		transform translateX(0)
+	to
+		transform translateX(25)
+
 html, body
 	position absolute
 	width 100%
@@ -147,15 +153,28 @@ body
 							box-shadow inset 0 0 2px rgba(77, 84, 92, 0.5)
 							overflow hidden
 						
-						div.item_progressbar_front
-							position absolute
-							top 0
-							left 0
-							bottom 0
-							width 0%
-							background linear-gradient(top, rgba(117, 124, 132, 1) 0%, rgba(97, 104, 112, 1) 60%, rgba(84, 91, 99, 1) 90%, rgba(77, 84, 92, 1) 100%)
-							box-shadow 0 0 4px rgba(77, 84, 92, 1)
-							transition width 0.5s ease
+							div.item_progressbar_front
+								position absolute
+								top 0
+								left 0
+								bottom 0
+								width 0%
+								background linear-gradient(top, rgba(117, 124, 132, 1) 0%, rgba(97, 104, 112, 1) 60%, rgba(84, 91, 99, 1) 90%, rgba(77, 84, 92, 1) 100%)
+								box-shadow 0 0 4px rgba(77, 84, 92, 1)
+								transition width 0.5s ease
+								overflow hidden
+							
+								div.item_progressbar_anim
+									display none
+									position absolute
+									background-size 25px 25px
+									top 0
+									left -25px
+									right 0
+									bottom 0
+									background linear-gradient(top left, white 0%, white 25%, transparent 25%, transparent 50%, white 50%, white 75%, transparent 75%, transparent 100%)
+									opacity 0.2
+									animation rec 0.5s linear infinite
 					
 					div.uploadbox
 						display none

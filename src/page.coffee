@@ -74,12 +74,17 @@ openDir = (path) ->
 						itemBox = $ "<div/>", class: "itembox"
 						itemBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"
 						progressBar = $ "<div/>", class: "item_progressbar_back"
-						progressBar.append $ "<div/>", class: "item_progressbar_front"
+						progressBar.append $("<div/>", class: "item_progressbar_front").append $ "<div/>", class: "item_progressbar_anim"
 						progressBar.appendTo itemBox
 						itemBox.insertBefore columnBox_inner.children("div.uploadbox")
 						socket.on "progress_#{info.hash}", (progress) ->
 							progressBar.children("div").css width: "#{progress.percent}%"
 							progressBar.children("div").attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
+							progressBar.children("div").children("div").css display: "none"
+						socket.on "waiting_#{info.hash}", (progress) ->
+							progressBar.children("div").css width: "#{progress.percent}%"
+							progressBar.children("div").attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
+							progressBar.children("div").children("div").css display: "block"
 						socket.once "complete_#{info.hash}", (info) ->
 							itemBox.remove()
 							newItemBox info, true

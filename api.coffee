@@ -94,20 +94,21 @@ class Client
 		src.on "data", (data) ->
 			uploaded += data.length
 			console.log uploaded: uploaded
-			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, true
+			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
 		src.end "data", (data) ->
 			if data?
 				uploaded += data.length
-			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, false
+			ret.emit "waiting", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, false
 		src.pipe dest
 	rangesChunk: (url, path, replace, ret, getAddr, callback) =>	
 		emitProgress = (volatile = true) ->
-			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, volatile
+			ret.emit if volatile then "progress" else "waiting", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
 		prevRes = null
 		uploadNextRange = =>
+			thisChunk = Math.min(fileSize - uploaded, maxChunkSize)
 			src = request.get
 				url: url
 				headers: 'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
@@ -128,13 +129,11 @@ class Client
 					prevRes = JSON.parse body
 				catch ex
 					console.log ex
-					console.log err: err, res: res, body: body
-					return
-					return @pipeFile url, path, replace, callback
-				unless prevRes.offset? and prevRes.offset is uploaded
-					console.log err: err, res: res, body: body
-					return
-					return @pipeFile url, path, replace, ret, callback
+					uploaded -= thisChunk
+					return uploadNextRange()
+				unless prevRes.offset? and prevRes.offset is uploaded	
+					uploaded -= thisChunk
+					return uploadNextRange()
 				if uploaded < fileSize
 					uploadNextRange()
 				else
@@ -168,7 +167,7 @@ class Client
 			total: 0
 			chunk: 0
 		emitProgress = (volatile = true) ->
-			ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100, volatile
+			ret.emit if volatile then "progress" else "waiting", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
 		prevRes = null
 		dest = null
 		newDest = =>
