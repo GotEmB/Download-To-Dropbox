@@ -104,7 +104,6 @@ class Client
 		emitProgress = (volatile = true) ->
 			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, volatile
 		fileSize = ret.fileSize
-		console.log fileSize: fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
 		uploadNextRange = =>
@@ -128,8 +127,13 @@ class Client
 				try
 					prevRes = JSON.parse body
 				catch ex
+					console.log ex
+					console.log err: err, res: res, body: body
+					return
 					return @pipeFile url, path, replace, callback
-				unless prevRes.offset? and prevRes.offset is uploaded.total
+				unless prevRes.offset? and prevRes.offset is uploaded	
+					console.log err: err, res: res, body: body
+					return
 					return @pipeFile url, path, replace, ret, callback
 				if uploaded < fileSize
 					uploadNextRange()
