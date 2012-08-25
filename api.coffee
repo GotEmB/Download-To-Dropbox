@@ -111,8 +111,7 @@ class Client
 			prevRes = null
 			src = request.get
 				url: url
-				'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
-			console.log src.headers
+				headers: 'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
 			req =
 				url: "https://#{getAddr()}/1/chunked_upload?" +
 					if prevRes? then qs.stringify
@@ -129,9 +128,9 @@ class Client
 				try
 					prevRes = JSON.parse body
 				catch ex
-					return pipeFile url, path, replace, callback
+					return @pipeFile url, path, replace, callback
 				unless prevRes.offset? and prevRes.offset is uploaded.total
-					return pipeFile url, path, replace, ret, callback
+					return @pipeFile url, path, replace, ret, callback
 				if uploaded < fileSize
 					uploadNextRange()
 				else
