@@ -106,8 +106,8 @@ class Client
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
+		prevRes = null
 		uploadNextRange = =>
-			prevRes = null
 			src = request.get
 				url: url
 				headers: 'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
@@ -131,7 +131,7 @@ class Client
 					console.log err: err, res: res, body: body
 					return
 					return @pipeFile url, path, replace, callback
-				unless prevRes.offset? and prevRes.offset is uploaded	
+				unless prevRes.offset? and prevRes.offset is uploaded
 					console.log err: err, res: res, body: body
 					return
 					return @pipeFile url, path, replace, ret, callback
