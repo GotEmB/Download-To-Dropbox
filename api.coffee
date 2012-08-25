@@ -89,7 +89,7 @@ class Client
 				emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
 				prevRes = null
 				dest = null
-				newDest = ->
+				newDest = =>
 					req =
 						url: "https://#{getAddr()}/1/chunked_upload?" +
 							if prevRes? then qs.stringify
