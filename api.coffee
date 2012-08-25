@@ -158,4 +158,4 @@ class Client
 							dest.end data[splitAt ...]
 		ret
 
-exports.createApp = (opts) -> new App 
+exports.createApp = (opts) -> new App opts
