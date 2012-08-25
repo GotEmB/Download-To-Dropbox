@@ -18,7 +18,7 @@ exports.req = req
 
 
 request = require "request"\
-src = request.get "http://appldnld.apple.com/iTunes10/041-6244.20120611.BbHi8/iTunes10.6.3.dmg"\
+src = request.get "http://appldnld.apple.com/QuickTime/041-4337.20120425.sxIv8/QuickTimeInstaller.exe"\
 dest = request.post\
     url: "https://api-content.dropbox.com/1/chunked_upload"\
     headers:\

@@ -92,11 +92,15 @@ class Client
 				dest = null
 				newDest = =>
 					req =
-						url: "https://#{getAddr()}/1/chunked_upload?"
+						url: "https://#{getAddr()}/1/chunked_upload?" +
+							if prevRes? then qs.stringify
+								upload_id: prevRes.upload_id
+								offset: prevRes.offset
+							else ""
 						method: "PUT"
 						headers:
 							Authorization: oauthHeader
-							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
+							'Content-Length': Math.min fileSize - uploaded.total - 10 * 1024 * 1024, maxChunkSize
 						endOnTick: false
 					dest = request req, (err, res, body) =>
 						console.log err: err, res: res, body: body
@@ -133,6 +137,7 @@ class Client
 						uploaded[i] += splitAt for i of uploaded
 						emitProgress false
 						dest.end data[0 ... splitAt]
+						console.log fileSize: fileSize, uploaded: uploaded
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
 							emitProgress()
@@ -143,19 +148,23 @@ class Client
 				src.on "end", (data) ->
 					unless data?
 						dest.end()
+						console.log fileSize: fileSize, uploaded: uploaded
 					else if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
 						emitProgress false
 						dest.end data
+						console.log fileSize: fileSize, uploaded: uploaded
 					else
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
 						emitProgress false
 						dest.end data[0 ... splitAt]
+						console.log fileSize: fileSize, uploaded: uploaded
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
 							emitProgress false
 							dest.end data[splitAt ...]
+							console.log fileSize: fileSize, uploaded: uploaded
 		ret
 
 exports.createApp = (opts) -> new App opts
