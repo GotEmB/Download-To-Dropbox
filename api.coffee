@@ -83,12 +83,12 @@ class Client
 			url: "https://api-content.dropbox.com/1/files_put/#{@app.root}/#{path}"
 			method: "PUT"
 			headers: Authorization: oauthHeader
-		dest = request req, (err, res, body) ->
+		dest = request req, (err, res, body) =>
 			try
 				meta = JSON.parse body
 			catch ex
 				src.removeAllListeners()
-				return pipeFile url, path, replace, callback
+				return @pipeFile url, path, replace, callback
 			ret.emit "complete", meta
 			callback? meta
 		src.on "data", (data) ->
@@ -107,11 +107,12 @@ class Client
 		console.log fileSize: fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
-		uploadNextRange = ->
+		uploadNextRange = =>
 			prevRes = null
 			src = request.get
 				url: url
 				'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
+			console.log src.headers
 			req =
 				url: "https://#{getAddr()}/1/chunked_upload?" +
 					if prevRes? then qs.stringify
@@ -139,14 +140,16 @@ class Client
 						method: "POST"
 						headers: Authorization: oauthHeader
 						form: upload_id: prevRes.upload_id
-					request req, (err, res, body) ->
+					request req, (err, res, body) =>
 						try
 							body = JSON.parse body
 						catch ex
-							return pipeFile url, path, replace, callback
+							console.log body
+							return @pipeFile url, path, replace, callback
 						ret.emit "complete", body
 						callback? body
 						ret.removeAllListeners()
+			src.on "response", console.log
 			src.on "data", (data) ->
 				uploaded += data.length
 				emitProgress()
@@ -184,12 +187,12 @@ class Client
 					src.removeAllListeners()
 					src.destroy()
 					dest.removeAllListeners()
-					return pipeFile url, path, replace, callback
+					return @pipeFile url, path, replace, callback
 				unless prevRes.offset? and prevRes.offset is uploaded.total
 					src.removeAllListeners()
 					src.destroy()
 					dest.removeAllListeners()
-					return pipeFile url, path, replace, ret, callback
+					return @pipeFile url, path, replace, ret, callback
 				if uploaded.total < fileSize
 					oldDest = dest
 					newDest()
@@ -203,13 +206,13 @@ class Client
 						method: "POST"
 						headers: Authorization: oauthHeader
 						form: upload_id: prevRes.upload_id
-					request req, (err, res, body) ->
+					request req, (err, res, body) =>
 						try
 							body = JSON.parse body
 						catch ex
 							src.removeAllListeners()
 							dest.removeAllListeners()
-							return pipeFile url, path, replace, callback
+							return @pipeFile url, path, replace, callback
 						ret.emit "complete", body
 						callback? body
 						ret.removeAllListeners()
