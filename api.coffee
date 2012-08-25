@@ -92,11 +92,7 @@ class Client
 				dest = null
 				newDest = =>
 					req =
-						url: "https://api-content.dropbox.com/1/chunked_upload?" +
-							if prevRes? then qs.stringify
-								upload_id: prevRes.upload_id
-								offset: prevRes.offset
-							else ""
+						url: "https://#{getAddr()}/1/chunked_upload?"
 						method: "PUT"
 						headers:
 							Authorization: oauthHeader
@@ -113,7 +109,7 @@ class Client
 							oldDest.removeAllListeners()
 						else
 							req =
-								url: "https://api-content.dropbox.com/1/commit_chunked_upload/#{@app.root}/#{path}"
+								url: "https://#{getAddr()}/1/commit_chunked_upload/#{@app.root}/#{path}"
 								method: "POST"
 								headers: Authorization: oauthHeader
 								form: upload_id: prevRes.upload_id
