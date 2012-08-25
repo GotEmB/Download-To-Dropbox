@@ -89,6 +89,7 @@ class Client
 				emitProgress = (volatile = true) ->
 					ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100, volatile
 				prevRes = null
+				dests = []
 				dest = null
 				newDest = =>
 					req =
@@ -100,7 +101,7 @@ class Client
 						method: "PUT"
 						headers:
 							Authorization: oauthHeader
-							'Content-Length': Math.min fileSize - uploaded.total - 10 * 1024 * 1024, maxChunkSize
+							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
 						endOnTick: false
 					dest = request req, (err, res, body) =>
 						console.log err: err, res: res, body: body
@@ -123,11 +124,13 @@ class Client
 								callback? body
 								ret.removeAllListeners()
 							dest.removeAllListeners()
+					dests.push dest
 				newDest()
 				src.on "data", (data) ->
 					if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
 						emitProgress()
+						console.log dests.indexOf dest
 						unless dest.write data
 							src.pause()
 							dest.once "drain", -> src.resume()
@@ -136,33 +139,39 @@ class Client
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
 						emitProgress false
+						console.log dests.indexOf dest
 						dest.end data[0 ... splitAt]
 						console.log fileSize: fileSize, uploaded: uploaded
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
 							emitProgress()
+							console.log dests.indexOf dest
 							unless dest.write data[splitAt ...]
 								dest.once "drain", -> src.resume()
 							else
 								src.resume()
 				src.on "end", (data) ->
 					unless data?
+						console.log dests.indexOf dest
 						dest.end()
 						console.log fileSize: fileSize, uploaded: uploaded
 					else if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
 						emitProgress false
+						console.log dests.indexOf dest
 						dest.end data
 						console.log fileSize: fileSize, uploaded: uploaded
 					else
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
 						emitProgress false
+						console.log dests.indexOf dest
 						dest.end data[0 ... splitAt]
 						console.log fileSize: fileSize, uploaded: uploaded
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
 							emitProgress false
+							console.log dests.indexOf dest
 							dest.end data[splitAt ...]
 							console.log fileSize: fileSize, uploaded: uploaded
 		ret
