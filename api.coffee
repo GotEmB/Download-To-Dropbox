@@ -86,7 +86,8 @@ class Client
 				uploaded = 
 					total: 0
 					chunk: 0
-				emitProgress = -> ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
+				emitProgress = (volatile = true) ->
+					ret.emit "progress", percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100, volatile
 				prevRes = null
 				dest = null
 				newDest = =>
@@ -102,7 +103,6 @@ class Client
 							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
 						endOnTick: false
 					dest = request req, (err, res, body) =>
-						prevRes
 						if uploaded.total < fileSize
 							oldDest = dest
 							newDest()
@@ -133,7 +133,7 @@ class Client
 						src.pause()
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
-						emitProgress()
+						emitProgress false
 						dest.end data[0 ... splitAt]
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
@@ -147,15 +147,16 @@ class Client
 						dest.end()
 					else if uploaded.chunk + data.length <= maxChunkSize
 						uploaded[i] += data.length for i of uploaded
-						emitProgress()
+						emitProgress false
 						dest.end data
 					else
 						splitAt = maxChunkSize - uploaded.chunk
 						uploaded[i] += splitAt for i of uploaded
-						emitProgress()
+						emitProgress false
 						dest.end data[0 ... splitAt]
 						dest.once "resurrected", ->
 							uploaded[i] += data.length - splitAt for i of uploaded
+							emitProgress false
 							dest.end data[splitAt ...]
 		ret
 

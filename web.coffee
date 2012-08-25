@@ -64,10 +64,9 @@ io.sockets.on "connection", (socket) ->
 		dld = socket.dbclient.pipeFile url, path, (meta) ->
 			socket.emit "complete_#{hash}", meta
 			delete currentDownloads[hash]
-		dld.on "progress", ({percent, bytes}) ->
-			#if Date.now() - lastProgress > 500
-				socket.volatile.emit "progress_#{hash}", percent: percent, bytes: bytes
-				#lastProgress = Date.now()
+		dld.on "progress", ({percent, bytes}, volatile) ->
+			emit = if volatile then socket.volatile.emit else socket.emit
+			emit "progress_#{hash}", percent: percent, bytes: bytes
 		dld.on "started", (fileSize) ->
 			callback hash: hash, fileSize: fileSize
 
