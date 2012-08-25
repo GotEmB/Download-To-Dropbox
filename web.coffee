@@ -69,7 +69,7 @@ io.sockets.on "connection", (socket) ->
 				socket.volatile.emit "progress_#{hash}", percent: percent, bytes: bytes
 			else
 				socket.emit "progress_#{hash}", percent: percent, bytes: bytes
-		dld.on "started", (fileSize) ->
+		dld.once "started", (fileSize) ->
 			callback hash: hash, fileSize: fileSize
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
