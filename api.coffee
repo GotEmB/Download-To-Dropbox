@@ -103,8 +103,8 @@ class Client
 							'Content-Length': Math.min fileSize - uploaded.total, maxChunkSize
 						endOnTick: false
 					dest = request req, (err, res, body) =>
+						console.log err: err, res: res, body: body
 						prevRes = JSON.parse body
-						console.log prevRes
 						if uploaded.total < fileSize
 							oldDest = dest
 							newDest()
