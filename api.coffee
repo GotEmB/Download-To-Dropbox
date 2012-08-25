@@ -98,20 +98,20 @@ class Client
 		src.end "data", (data) ->
 			if data?
 				uploaded += data.length
-				console.log uploadOver: uploaded
-				ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, true
+			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, false
 		src.pipe dest
 	rangesChunk: (url, path, replace, ret, getAddr, callback) =>	
 		emitProgress = (volatile = true) ->
 			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, volatile
 		fileSize = ret.fileSize
+		console.log fileSize: fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
 		uploadNextRange = ->
 			prevRes = null
 			src = request.get
 				url: url
-				'Content-Range': "bytes #{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}/fileSize"
+				'Range': "bytes=#{uploaded}-#{uploaded + Math.min(fileSize - uploaded, maxChunkSize) - 1}"
 			req =
 				url: "https://#{getAddr()}/1/chunked_upload?" +
 					if prevRes? then qs.stringify
@@ -150,9 +150,10 @@ class Client
 			src.on "data", (data) ->
 				uploaded += data.length
 				emitProgress()
-			src.end "data", (data) ->
+			src.on "end", (data) ->
 				uploaded += data.length if data?
 				emitProgress false
+			src.pipe dest
 		uploadNextRange()
 	manualChunk: (src, path, replace, ret, getAddr, callback) =>
 		fileSize = ret.fileSize
@@ -196,6 +197,7 @@ class Client
 					oldDest.emit "resurrected"
 					oldDest.removeAllListeners()
 				else
+					emitProgress false
 					req =
 						url: "https://#{getAddr()}/1/commit_chunked_upload/#{@app.root}/#{path}"
 						method: "POST"
