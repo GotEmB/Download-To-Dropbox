@@ -79,11 +79,11 @@ openDir = (path) ->
 						itemBox.insertBefore columnBox_inner.children("div.uploadbox")
 						socket.on "progress_#{info.hash}", (progress) ->
 							progressBar.children("div").css width: "#{progress.percent}%"
-							progressBar.children("div").attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
+							progressBar.attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
 							progressBar.children("div").children("div").css display: "none"
 						socket.on "waiting_#{info.hash}", (progress) ->
 							progressBar.children("div").css width: "#{progress.percent}%"
-							progressBar.children("div").attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
+							progressBar.attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
 							progressBar.children("div").children("div").css display: "block"
 						socket.once "complete_#{info.hash}", (info) ->
 							itemBox.remove()

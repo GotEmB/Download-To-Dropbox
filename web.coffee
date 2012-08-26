@@ -6,6 +6,7 @@ url = require "url"
 dropboxApi = require "./api"
 md5 = require "MD5"
 {spawn} = require "child_process"
+_ = require "underscore"
 
 cp = spawn "cake", ["build"]
 await cp.on "exit", defer code
@@ -13,6 +14,7 @@ return console.log "Build failed! Run 'cake build' to display build errors." if 
 
 futureClients = {}
 currentDownloads = {}
+users = {}
 
 dbapp = dropboxApi.createApp
 	app_key: process.env.DB_KEY
@@ -22,8 +24,21 @@ dbapp = dropboxApi.createApp
 expressServer = express()
 expressServer.configure ->
 	expressServer.use express.bodyParser()
+	expressServer.use express.cookieParser md5 "#{process.env.DB_SECRET}...secretStuff"
 	expressServer.use (req, res, next) ->
-		req.url = "/page.html" if req.query.oauth_token?
+		if req.query.oauth_token? and params.oauth_token of futureClients
+			futureClients[params.oauth_token] (client) ->
+				delete futureClients[params.oauth_token]
+				user = md5 "#{Date.now()}...userHash" until user? and user not of users
+				res.cookie "user", user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
+				users[user] = client
+				socket.dbclient = client
+				socket.dbclient.getAccountInfo (info) ->
+					req.url = "/page.html"
+					return next()
+		else if req.cookies.user? and req.cookies.user of user
+			req.url = "/page.html"
+			res.cookie "user", req.cookies.user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
 		next()
 	expressServer.use express.static "#{__dirname}/lib", maxAge: 31557600000, (err) -> console.log "Static: #{err}"
 	expressServer.use expressServer.router
@@ -46,22 +61,26 @@ io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
 	socket.on "sync_info", (params, callback) ->
-		return callback error: "Invalid Token" unless params.oauth_token of futureClients
-		futureClients[params.oauth_token] (client) ->
-			delete futureClients[params.oauth_token]
-			socket.dbclient = client
+		if params.user?
+			socket.dbclient = users[params.user]
 			socket.dbclient.getAccountInfo (info) ->
 				callback info
+		else
+			return callback error: "Impossible Error!"
 	
 	socket.on "get_metadata", (path, callback) ->
 		socket.dbclient.getMetadata path, (meta) ->
 			callback meta
 	
+	socket.on "dtd_getFileName", (url, callback) ->
+		request.head url, (err, res) ->
+			url = _(res.request.redirects).last() ? url
+			callback _(url).split("/").last()
+	
 	socket.on "downloadtodropbox", ([url, path, replace]..., callback) ->
 		lastProgress = Date.now()
 		hash = md5 "#{url}%&$#{path}%&$#{Date.now().toString()}" until hash? and hash not of currentDownloads
-		currentDownloads[hash] = true
-		dld = socket.dbclient.pipeFile url, path, (meta) ->
+		currentDownloads[hash] = dld = socket.dbclient.pipeFile url, path, (meta) ->
 			socket.emit "complete_#{hash}", meta
 			delete currentDownloads[hash]
 		dld.on "progress", ({percent, bytes}) ->
