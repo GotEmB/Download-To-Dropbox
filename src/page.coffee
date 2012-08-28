@@ -1,6 +1,4 @@
-socket = {}
-
-getParams = QueryString.parse URL.parse(window.location.toString()).query
+socket = null
 window.history.pushState null, "", "/"
 
 async = (a, b) ->
@@ -100,9 +98,8 @@ openDir = (path) ->
 
 $(document).ready ->
 	socket = io.connect()
-	socket.on "connect", ->
-		socket.emit "sync_info", getParams, (info) ->
-			return alert info.error if info.error?
-			$("#displayname").text info.display_name
-			setQuotaText info.quota_info
-			openDir "/"
+	socket.on "setupSession", (info) ->
+		return alert info.error if info.error?
+		$("#displayname").text info.display_name
+		setQuotaText info.quota_info
+		openDir "/"
