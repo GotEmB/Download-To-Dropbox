@@ -5,12 +5,16 @@ request = require "request"
 url = require "url"
 dropboxApi = require "./api"
 md5 = require "MD5"
+connect = require "connect"
+cookie = require "cookie"
 {spawn} = require "child_process"
 _ = require "underscore"
 
 cp = spawn "cake", ["build"]
 await cp.on "exit", defer code
 return console.log "Build failed! Run 'cake build' to display build errors." if code isnt 0
+
+cookieSecret = md5 "#{process.env.DB_SECRET}...secretStuff"
 
 futureClients = {}
 currentDownloads = {}
@@ -24,22 +28,23 @@ dbapp = dropboxApi.createApp
 expressServer = express()
 expressServer.configure ->
 	expressServer.use express.bodyParser()
-	expressServer.use express.cookieParser md5 "#{process.env.DB_SECRET}...secretStuff"
+	expressServer.use express.cookieParser cookieSecret
 	expressServer.use (req, res, next) ->
-		if req.query.oauth_token? and params.oauth_token of futureClients
-			futureClients[params.oauth_token] (client) ->
-				delete futureClients[params.oauth_token]
+		return next() unless req.path is "/"
+		if req.query.oauth_token? and req.query.oauth_token of futureClients
+			futureClients[req.query.oauth_token] (client) ->
+				delete futureClients[req.query.oauth_token]
 				user = md5 "#{Date.now()}...userHash" until user? and user not of users
 				res.cookie "user", user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
 				users[user] = client
-				socket.dbclient = client
-				socket.dbclient.getAccountInfo (info) ->
-					req.url = "/page.html"
-					return next()
-		else if req.cookies.user? and req.cookies.user of user
-			req.url = "/page.html"
-			res.cookie "user", req.cookies.user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
-		next()
+				client.getAccountInfo (info) ->
+					req.url = "/page.html" unless info.error?
+					next()
+		else
+			if req.signedCookies.user? and req.signedCookies.user of users
+				req.url = "/page.html"
+				res.cookie "user", req.signedCookies.user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
+			next()
 	expressServer.use express.static "#{__dirname}/lib", maxAge: 31557600000, (err) -> console.log "Static: #{err}"
 	expressServer.use expressServer.router
 
@@ -60,13 +65,13 @@ io = socket_io.listen server
 io.set "log level", 0
 io.sockets.on "connection", (socket) ->
 	
-	socket.on "sync_info", (params, callback) ->
-		if params.user?
-			socket.dbclient = users[params.user]
+	if socket.handshake.headers.cookie.split("=").indexOf("user") isnt -1
+		socket.dbclient = users[connect.utils.parseSignedCookies(cookie.parse(socket.handshake.headers.cookie), cookieSecret).user]
+		if socket.dbclient?
 			socket.dbclient.getAccountInfo (info) ->
-				callback info
-		else
-			return callback error: "Impossible Error!"
+				socket.emit "setupSession", info
+	else
+		return socket.emit "setupSession", error: "Invalid Session"
 	
 	socket.on "get_metadata", (path, callback) ->
 		socket.dbclient.getMetadata path, (meta) ->
