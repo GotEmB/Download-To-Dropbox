@@ -39,7 +39,7 @@ friendlySize = (bytes) ->
 
 openDir = (path) ->
 	columnsContainer = $ "#columnscontainer"
-	socket.emit "get_metadata", path, (data) ->
+	socket.emit "get_metadata", path, (data, dlds) ->
 		columnBox = $ "<div/>", class: "columnbox moveLeft"
 		columnBox_inner = $ "<div/>", class: "columnbox_inner"
 		columnBox.append columnBox_inner
@@ -60,33 +60,37 @@ openDir = (path) ->
 			else
 				columnBox_inner.append itemBox
 		data.contents.forEach newItemBox
+		newDldBox = (info, progress) ->
+			itemBox = $ "<div/>", class: "itembox"
+			itemBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"
+			itemBox.append $ "<div/>", class: class: "item_text above_progress", text: _(info.path.split "/").last()
+			progressBar = $ "<div/>", class: "item_progressbar_back"
+			progressBar.append $("<div/>", class: "item_progressbar_front").append $ "<div/>", class: "item_progressbar_anim"
+			progressBar.appendTo itemBox
+			itemBox.insertBefore columnBox_inner.children("div.uploadbox")
+			updateProgress = (progress, state) ->
+				progressBar.children("div").css width: "#{progress.percent}%"
+				progressBar.attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
+				progressBar.children("div").children("div").css display: if state is "waiting" then "block" else "none"
+			updateProgress progress, progress.state if progress?
+			socket.on "progress_#{info.hash}", (progress) -> updateProgress progress, "progress"
+			socket.on "waiting_#{info.hash}", (progress) -> updateProgress progress, "waiting"
+			socket.once "complete_#{info.hash}", (info) ->
+				itemBox.remove()
+				newItemBox info, true
 		do ->
 			uploadBox = $ "<div/>", class: "itembox uploadbox"
 			uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
 			uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
+				.bind("DOMSubtreeModified", -> $(@).text $(@).text())
 				.keypress (e) ->
 					return if e.which isnt 13
 					e.preventDefault()
 					socket.emit "downloadtodropbox", $(@).text(), "apath", (info) ->
 						uploadBox.children("div.item_text").text "http://"
-						itemBox = $ "<div/>", class: "itembox"
-						itemBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"
-						progressBar = $ "<div/>", class: "item_progressbar_back"
-						progressBar.append $("<div/>", class: "item_progressbar_front").append $ "<div/>", class: "item_progressbar_anim"
-						progressBar.appendTo itemBox
-						itemBox.insertBefore columnBox_inner.children("div.uploadbox")
-						socket.on "progress_#{info.hash}", (progress) ->
-							progressBar.children("div").css width: "#{progress.percent}%"
-							progressBar.attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
-							progressBar.children("div").children("div").css display: "none"
-						socket.on "waiting_#{info.hash}", (progress) ->
-							progressBar.children("div").css width: "#{progress.percent}%"
-							progressBar.attr title: "#{progress.percent}% (#{friendlySize progress.bytes} of #{friendlySize info.fileSize})"
-							progressBar.children("div").children("div").css display: "block"
-						socket.once "complete_#{info.hash}", (info) ->
-							itemBox.remove()
-							newItemBox info, true
+						newDldBox info
 			uploadBox.appendTo columnBox_inner
+		dlds.forEach (dld) -> newDldBox dld, dld.progress
 		columnBox.css marginLeft: 30 + columnsContainer.children().length * 330
 		columnBox.prependTo columnsContainer
 		async 25, ->

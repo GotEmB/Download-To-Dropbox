@@ -34,7 +34,7 @@ class App
 				oauth_signature: "#{@app_secret}&"
 		request req, (err, res, body) =>
 			request_token = qs.parse body
-			callback request_token.oauth_token, (callback) =>
+			callback request_token.oauth_token, ([uid]..., callback) =>
 				dns.resolve "api.dropbox.com", (err, addr) =>
 					req =
 						url: "https://#{addr[0]}/1/oauth/access_token"
@@ -47,13 +47,14 @@ class App
 							oauth_token: request_token.oauth_token
 							oauth_signature: "#{@app_secret}&#{request_token.oauth_token_secret}"
 					request req, (err, res, body) =>
-						callback new Client app: @, access_token: qs.parse body
+						callback new Client app: @, uid: uid, access_token: qs.parse body
 
 class Client
 	oauthHeader = null
 	constructor: (opts) ->
 		@app = opts.app
 		@access_token = opts.access_token
+		@uid = opts.uid ? null
 		oauthHeader = headerify
 			title: "OAuth"
 			oauth_version: "1.0"
@@ -76,6 +77,12 @@ class Client
 				headers: Authorization: oauthHeader
 			request req, (err, res, body) -> callback JSON.parse body
 	simpleUpload: (src, path, replace, ret, getAddr, callback) =>
+		emitProgress = (volatile = true) ->
+			ret.progress = rp =
+				state: if volatile then "progress" else "waiting"
+				percent: Math.round(uploaded / fileSize * 10000) / 100
+				bytes: Math.round(uploaded * 100) / 100
+			ret.emit rp.state, percent: rp.percent, bytes: rp.bytes
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
@@ -86,23 +93,26 @@ class Client
 		dest = request req, (err, res, body) =>
 			try
 				meta = JSON.parse body
-			catch ex
+			catch ex	
+				console.log statusCode: res.statusCode
 				src.removeAllListeners()
-				return @pipeFile url, path, replace, callback
+				return @pipeFile src.url, path, replace, callback
 			ret.emit "complete", meta
 			callback? meta
 		src.on "data", (data) ->
 			uploaded += data.length
-			console.log uploaded: uploaded
-			ret.emit "progress", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
-		src.end "data", (data) ->
-			if data?
-				uploaded += data.length
-			ret.emit "waiting", percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100, false
+			emitProgress()
+		src.on "end", (data) ->
+			uploaded += data.length if data?
+			emitProgress false
 		src.pipe dest
-	rangesChunk: (url, path, replace, ret, getAddr, callback) =>	
+	rangesChunk: (url, path, replace, ret, getAddr, callback) =>
 		emitProgress = (volatile = true) ->
-			ret.emit (if volatile then "progress" else "waiting"), percent: Math.round(uploaded / fileSize * 10000) / 100, bytes: Math.round(uploaded * 100) / 100
+			ret.progress = rp =
+				state: if volatile then "progress" else "waiting"
+				percent: Math.round(uploaded / fileSize * 10000) / 100
+				bytes: Math.round(uploaded * 100) / 100
+			ret.emit rp.state, percent: rp.percent, bytes: rp.bytes
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 0
@@ -128,10 +138,11 @@ class Client
 				try
 					prevRes = JSON.parse body
 				catch ex
-					console.log ex
+					console.log statusCode: res.statusCode
 					uploaded -= thisChunk
 					return uploadNextRange()
-				unless prevRes.offset? and prevRes.offset is uploaded	
+				unless prevRes.offset? and prevRes.offset is uploaded
+					console.log statusCode: res.statusCode
 					uploaded -= thisChunk
 					return uploadNextRange()
 				if uploaded < fileSize
@@ -146,8 +157,7 @@ class Client
 						try
 							body = JSON.parse body
 						catch ex
-							console.log err: err, res: res, body: body
-							return
+							console.log statusCode: res.statusCode
 							return @pipeFile url, path, replace, callback
 						ret.emit "complete", body
 						callback? body
@@ -161,13 +171,17 @@ class Client
 			src.pipe dest
 		uploadNextRange()
 	manualChunk: (src, path, replace, ret, getAddr, callback) =>
+		emitProgress = (volatile = true) ->
+			ret.progress = rp =
+				state: if volatile then "progress" else "waiting"
+				percent: Math.round(uploaded.total / fileSize * 10000) / 100
+				bytes: Math.round(uploaded.total * 100) / 100
+			ret.emit rp.state, percent: rp.percent, bytes: rp.bytes
 		fileSize = ret.fileSize
 		ret.emit "started", fileSize
 		uploaded = 
 			total: 0
 			chunk: 0
-		emitProgress = (volatile = true) ->
-			ret.emit (if volatile then "progress" else "waiting"), percent: Math.round(uploaded.total / fileSize * 10000) / 100, bytes: Math.round(uploaded.total * 100) / 100
 		prevRes = null
 		dest = null
 		newDest = =>
@@ -186,11 +200,13 @@ class Client
 				try
 					prevRes = JSON.parse body
 				catch ex
+					console.log statusCode: res.statusCode
 					src.removeAllListeners()
 					src.destroy()
 					dest.removeAllListeners()
 					return @pipeFile url, path, replace, callback
 				unless prevRes.offset? and prevRes.offset is uploaded.total
+					console.log statusCode: res.statusCode
 					src.removeAllListeners()
 					src.destroy()
 					dest.removeAllListeners()
@@ -212,6 +228,7 @@ class Client
 						try
 							body = JSON.parse body
 						catch ex
+							console.log statusCode: res.statusCode
 							src.removeAllListeners()
 							dest.removeAllListeners()
 							return @pipeFile url, path, replace, callback
@@ -258,21 +275,22 @@ class Client
 					dest.end data[splitAt ...]
 	pipeFile: ([url, path, replace, ret]..., callback) =>
 		ret ?= new events.EventEmitter()
+		ret.client = @
+		ret.url = url
+		ret.path = path
 		dns.resolve "api-content.dropbox.com", (err, addr) =>
 			getAddr = -> addr[Math.floor Math.random() * addr.length]
 			src = request.get url
 			src.once "response", (response) =>
+				src.url = url
 				ret.fileSize = response.headers['content-length']
 				if ret.fileSize <= 150 * 1024 * 1024
 					@simpleUpload src, path, replace, ret, getAddr, callback
-					console.log "simpleUpload"
 				else if "accept-ranges" of response.headers and response.headers["accept-ranges"] is "bytes"
 					src.destroy()
 					@rangesChunk url, path, replace, ret, getAddr, callback
-					console.log "rangesChunk"
 				else
 					@manualChunk src, path, replace, ret, getAddr, callback
-					console.log "manualChunk"
 		ret
 
 exports.createApp = (opts) -> new App opts

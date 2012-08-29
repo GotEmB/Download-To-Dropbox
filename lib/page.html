@@ -7,8 +7,9 @@
 		<meta http-equiv="Pragma" content="no-cache">
 		<meta http-equiv="Expires" content="0">
 		<title>Download to Dropbox</title>
-		<link rel="stylesheet" href="page.css" type="text/css" media="screen" title="no title" charset="utf-8">
 		<link rel="stylesheet" href="web_sprites.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		<link rel="stylesheet" href="page.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		<link rel="stylesheet" href="spinnericon.css" type="text/css" media="screen" title="no title" charset="utf-8">
 		<script src="jquery-1.7.2.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="underscore-min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="querystring.js" type="text/javascript" charset="utf-8"></script>
@@ -25,6 +26,38 @@
 		<div id="headerbackdrop"></div>
 		<div id="mainbox">
 			<div id="columnscontainer"></div>
+		</div>
+		<div id="pathnamecontainer">
+			<div id="pathnamecontainer_inner">
+				<div id="pathnamebox">
+					<div id="pathnamebox_back"></div>
+					<div id="pleaseWait_pathnamebox">
+						<div class="container grey">
+							<div class="spinner">
+								<div class="bar1"></div>
+								<div class="bar2"></div>
+								<div class="bar3"></div>
+								<div class="bar4"></div>
+								<div class="bar5"></div>
+								<div class="bar6"></div>
+								<div class="bar7"></div>
+								<div class="bar8"></div>
+								<div class="bar9"></div>
+								<div class="bar10"></div>
+								<div class="bar11"></div>
+								<div class="bar12"></div>
+							</div>
+						</div>
+					</div>
+					<div id="saveasbox">
+						<div id="saveas_url">http://</div>
+						<div id="saveas_downarrow"></div>
+						<div id="saveas_path" contenteditable="true"></div>
+						<div id="saveas_ok">Okay</div>
+						<div id="saveas_cancel">Cancel</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</body>
 </html>

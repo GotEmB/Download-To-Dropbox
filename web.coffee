@@ -32,7 +32,7 @@ expressServer.configure ->
 	expressServer.use (req, res, next) ->
 		return next() unless req.path is "/"
 		if req.query.oauth_token? and req.query.oauth_token of futureClients
-			futureClients[req.query.oauth_token] (client) ->
+			futureClients[req.query.oauth_token] req.query.uid, (client) ->
 				delete futureClients[req.query.oauth_token]
 				user = md5 "#{Date.now()}...userHash" until user? and user not of users
 				res.cookie "user", user, signed: true, maxAge: 30 * 24 * 60 * 60 * 1000
@@ -75,7 +75,12 @@ io.sockets.on "connection", (socket) ->
 	
 	socket.on "get_metadata", (path, callback) ->
 		socket.dbclient.getMetadata path, (meta) ->
-			callback meta
+			callback meta,
+				for hash, dld of currentDownloads when dld.client is socket.dbclient and dld.path is path
+					hash: hash
+					path: dld.path
+					fileSize: dld.fileSize
+					progress: dld.progress
 	
 	socket.on "dtd_getFileName", (url, callback) ->
 		request.head url, (err, res) ->
