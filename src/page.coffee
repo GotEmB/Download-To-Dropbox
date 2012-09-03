@@ -63,7 +63,7 @@ openDir = (path) ->
 		newDldBox = (info, progress) ->
 			itemBox = $ "<div/>", class: "itembox"
 			itemBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"
-			itemBox.append $ "<div/>", class: class: "item_text above_progress", text: _(info.path.split "/").last()
+			itemBox.append $ "<div/>", class: "item_text above_progress", text: _(info.path.split "/").last()
 			progressBar = $ "<div/>", class: "item_progressbar_back"
 			progressBar.append $("<div/>", class: "item_progressbar_front").append $ "<div/>", class: "item_progressbar_anim"
 			progressBar.appendTo itemBox
@@ -81,14 +81,32 @@ openDir = (path) ->
 		do ->
 			uploadBox = $ "<div/>", class: "itembox uploadbox"
 			uploadBox.append $ "<div/>", class: "item_image sprite_web s_web_page_white_get_32"	
-			uploadBox.append $("<div/>", class: "item_text", contenteditable: true, text: "http://")
-				.bind("DOMSubtreeModified", -> $(@).text $(@).text())
-				.keypress (e) ->
-					return if e.which isnt 13
-					e.preventDefault()
-					socket.emit "downloadtodropbox", $(@).text(), "apath", (info) ->
-						uploadBox.children("div.item_text").text "http://"
-						newDldBox info
+			uploadBox.append urlBox = $ "<input/>", type: "text", class: "item_text", contenteditable: true, value: "http://"
+			urlBox.keypress (e) ->
+				return if e.which not in [13, 32]
+				e.preventDefault()
+				return if e.which is 32
+				$("#pathnamecontainer, #pathnamebox").removeClass "hide"
+				socket.emit "dtd_getFileName", $(@).val(), (url, name) ->
+					$("#saveas_url").val url
+					$("#saveas_path").text "#{path}#{if path.charAt(path.length - 1) is "/" then "" else "/"}"
+					$("#saveas_name").val name
+					$("#saveasbox").css display: "block"
+					$("#pleaseWait_pathnamebox").css display: "none"
+					$("#saveas_ok").click ->
+						$("#saveas_ok, saveas_cancel").unbind "click"
+						$("#saveasbox").css display: "none"
+						$("#pleaseWait_pathnamebox").css display: "block"
+						socket.emit "downloadtodropbox", url, $("#saveas_path") + $("#saveas_name"), (info) ->
+							$("#pathnamecontainer, pathnamebox").addClass "hide"
+							uploadBox.children(".item_text").val "http://"
+							newDldBox info
+					$("#saveas_cancel").click ->
+						$("#saveas_ok, saveas_cancel").unbind "click"
+						$("#saveasbox").css display: "none"
+						$("#pleaseWait_pathnamebox").css display: "block"
+						$("#pathnamecontainer, #pathnamebox").addClass "hide"
+						uploadBox.children(".item_text").val "http://"
 			uploadBox.appendTo columnBox_inner
 		dlds.forEach (dld) -> newDldBox dld, dld.progress
 		columnBox.css marginLeft: 30 + columnsContainer.children().length * 330
@@ -107,3 +125,7 @@ $(document).ready ->
 		$("#displayname").text info.display_name
 		setQuotaText info.quota_info
 		openDir "/"
+	
+	$("#saveas_name").bind "keydown blur update", (e) ->
+		$("#saveas_dummyname").text $("#saveas_name").val() + if e.type is "keydown" and e.which not in [8, 13] then String.fromCharCode e.which else ""
+		$("#saveas_name").css width: Math.max $("#saveas_dummyname").width() + 2, 350 - $("#saveas_path").width()

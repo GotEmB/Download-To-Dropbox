@@ -87,14 +87,14 @@ class Client
 		ret.emit "started", fileSize
 		uploaded = 0
 		req =
-			url: "https://api-content.dropbox.com/1/files_put/#{@app.root}/#{path}"
+			url: "https://#{getAddr()}/1/files_put/#{@app.root}/#{path}"
 			method: "PUT"
 			headers: Authorization: oauthHeader
 		dest = request req, (err, res, body) =>
 			try
 				meta = JSON.parse body
 			catch ex	
-				console.log statusCode: res.statusCode
+				console.log statusCode: res.statusCode if res?
 				src.removeAllListeners()
 				return @pipeFile src.url, path, replace, callback
 			ret.emit "complete", meta

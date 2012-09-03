@@ -27,34 +27,42 @@
 		<div id="mainbox">
 			<div id="columnscontainer"></div>
 		</div>
-		<div id="pathnamecontainer">
-			<div id="pathnamecontainer_inner">
-				<div id="pathnamebox">
-					<div id="pathnamebox_back"></div>
-					<div id="pleaseWait_pathnamebox">
-						<div class="container grey">
-							<div class="spinner">
-								<div class="bar1"></div>
-								<div class="bar2"></div>
-								<div class="bar3"></div>
-								<div class="bar4"></div>
-								<div class="bar5"></div>
-								<div class="bar6"></div>
-								<div class="bar7"></div>
-								<div class="bar8"></div>
-								<div class="bar9"></div>
-								<div class="bar10"></div>
-								<div class="bar11"></div>
-								<div class="bar12"></div>
+		<div id="pathnamecontainer" class="hide">
+			<div id="pathnamecontainer_middle">
+				<div id="pathnamecontainer_inner">
+					<div id="pathnamebox" class="hide">
+						<div id="pathnamebox_back"></div>
+						<div id="pleaseWait_pathnamebox">
+							<div class="container grey">
+								<div class="spinner">
+									<div class="bar1"></div>
+									<div class="bar2"></div>
+									<div class="bar3"></div>
+									<div class="bar4"></div>
+									<div class="bar5"></div>
+									<div class="bar6"></div>
+									<div class="bar7"></div>
+									<div class="bar8"></div>
+									<div class="bar9"></div>
+									<div class="bar10"></div>
+									<div class="bar11"></div>
+									<div class="bar12"></div>
+								</div>
 							</div>
 						</div>
-					</div>
-					<div id="saveasbox">
-						<div id="saveas_url">http://</div>
-						<div id="saveas_downarrow"></div>
-						<div id="saveas_path" contenteditable="true"></div>
-						<div id="saveas_ok">Okay</div>
-						<div id="saveas_cancel">Cancel</div>
+						<div id="saveasbox">
+							<div class="blacktextcontainer">
+								<input id="saveas_url" readonly="readonly"></input>
+							</div>
+							<div id="saveas_downarrow"></div>
+							<div class="blacktextcontainer">
+								<span id="saveas_path"></span>
+								<input id="saveas_name"></input>
+								<span id="saveas_dummyname"></span>
+							</div>
+							<div id="saveas_ok">Okay</div>
+							<div id="saveas_cancel">Cancel</div>
+						</div>
 					</div>
 				</div>
 			</div>

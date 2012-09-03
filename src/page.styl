@@ -183,106 +183,154 @@ body
 					div.uploadbox
 						display none
 						
-						div.item_text
+						input.item_text
+							position absolute
 							width 235px;
-							text-overflow clip;
 							border solid 1px rgba(77, 84, 92, 0.5)
 							padding 4px
 							margin 13px -4px
+							left 48px
+							font-family inherit
+							font-size 14px
+							background rgba(255, 255, 255, 0.5)
 					
 				&:hover div.columnbox_inner div.uploadbox
 					display block
 	
 	#pathnamecontainer
 		position absolute
-		display table
-		height 100%
-		width 100%
-		background rgba(142, 149, 157, 0.25)
+		top 50px
+		left 0
+		bottom 0
+		right 0
+		background rgba(132, 139, 147, 0.5)
+		transition background 0.2s ease
+		z-index 50
 		
-		#pathnamecontainer_inner
-			display table-cell
-			vertical-align middle
+		&.hide
+			background transparent
+			pointer-events none
+		
+		#pathnamecontainer_middle
+			position absolute
+			display table
+			width 100%
+			height 100%
 			
-			#pathnamebox
-				position relative
-				margin auto
-				width 400px
-				height 200px
-				background #cdd4dc url(bg.png)
-				border-radius 8px
-				box-shadow 0 1px 8px rgb(77, 84, 92)
-				
-				#pathnamebox_back
-					position absolute
-					width 100%
-					height 100%
+			#pathnamecontainer_inner
+				display table-cell
+				vertical-align middle
+			
+				#pathnamebox
+					position relative
+					margin auto
+					width 400px
+					height 200px
+					background #cdd4dc url(bg.png)
 					border-radius 8px
-					background linear-gradient(top, rgba(215, 222, 230, 0.5) 0%, rgba(195, 202, 210, 0.5) 60%, rgba(182, 189, 197, 0.5) 90%, rgba(175, 182, 190, 0.5) 100%)
+					box-shadow 0 1px 8px rgb(77, 84, 92)
+					transition transform 0.2s ease
 				
-				#pleaseWait_pathnamebox
-					position absolute
-					width 108px
-					top 46px
-					left 146px
+					&.hide
+						transform scale(0)
 				
-				#saveasbox
-					position absolute
-					top 20px
-					left 20px
-					right 20px
-					bottom 20px
+					#pathnamebox_back
+						position absolute
+						width 100%
+						height 100%
+						border-radius 8px
+						background linear-gradient(top, rgba(215, 222, 230, 0.5) 0%, rgba(195, 202, 210, 0.5) 60%, rgba(182, 189, 197, 0.5) 90%, rgba(175, 182, 190, 0.5) 100%)
 				
-				#saveas_url, #saveas_path
-					display block
-					background rgba(0, 0, 0, 0.5)
-					padding 4px
-					margin 8px 0
-					border = none
-					box-shadow 0 2px 3px #E1E8F0
-					color #ddd
-					font-weight 500
-					font-size 16px
-					border-radius 2px
+					#pleaseWait_pathnamebox
+						position absolute
+						width 108px
+						top 46px
+						left 146px
 				
-				#saveas_downarrow
-					width 0
-					height 0
-					border-left 10px solid transparent
-					border-right 10px solid transparent
-					border-top 20px solid rgba(0, 0, 0, 0.5)
-					margin 10px auto
+					#saveasbox
+						display none
+						position absolute
+						top 20px
+						left 20px
+						right 20px
+						bottom 20px
 				
-				#saveas_path
-					color white
-					
-					&:before
-						content "/stash/ps/"
+					#saveas_downarrow
+						width 0
+						height 0
+						border-left 10px solid transparent
+						border-right 10px solid transparent
+						border-top 20px solid rgba(0, 0, 0, 0.5)
+						margin 10px auto
+				
+					div.blacktextcontainer
+						display block
+						background rgba(0, 0, 0, 0.5)
+						border 4px solid transparent
+						padding 0
+						margin 8px 0
+						box-shadow 0 2px 3px #E1E8F0
 						color #ddd
+						border-radius 2px
+						white-space nowrap
+						overflow-x hidden
+						cursor text
+						
+						#saveas_url, #saveas_path, #saveas_name, #saveas_dummyname
+							outline none
+							border none
+							padding 0
+							margin 0
+							background none
+							font-family inherit
+							font-weight 500
+							font-size 16px
+							color inherit
+							width 352px
+						
+						#saveas_path
+							margin-left 2px
+						
+						#saveas_name
+							color white
+							margin-left -5px
+						
+						#saveas_dummyname
+							display none
+							width auto
 				
-				#saveas_ok, #saveas_cancel
-					position absolute
-					right 0
-					bottom 0
-					padding 6px
-					width 60px
-					border-radius 2px
-					text-align center
-					color white
-					box-shadow inset 0 0 2px rgba(255, 255, 255, 0.5)
-					cursor pointer
+					#saveas_ok, #saveas_cancel
+						position absolute
+						right 0
+						bottom 0
+						padding 6px
+						width 60px
+						border-radius 2px
+						text-align center
+						color white
+						box-shadow inset 0 0 2px rgba(255, 255, 255, 0.5)
+						cursor pointer
+						font-size 16px
 				
-				#saveas_ok
-					background linear-gradient(top, #5b4 0%, #492 60%, #381 90%, #270 100%)
-					border 1px solid #270
+					#saveas_ok
+						background linear-gradient(top, #5b4 0%, #492 60%, #381 90%, #270 100%)
+						border 1px solid #270
+						text-shadow 0 -1px 2px #270
 					
-					&:hover
-						background linear-gradient(top, #6c5 0%, #5a3 60%, #492 90%, #381 100%)
-				
-				#saveas_cancel
-					background linear-gradient(top, #d54 0%, #b42 60%, #a31 90%, #920 100%)
-					right 80px
-					border 1px solid #920
+						&:hover
+							background linear-gradient(top, #6c5 0%, #5a3 60%, #492 90%, #381 100%)
 					
-					&:hover
-						background linear-gradient(top, #e65 0%, #c53 60%, #b42 90%, #a31 100%)
+						&:active
+							background linear-gradient(bottom, #4a3 0%, #381 100%)
+				
+					#saveas_cancel
+						background linear-gradient(top, #d54 0%, #b42 60%, #a31 90%, #920 100%)
+						right 80px
+						border 1px solid #920
+						text-shadow 0 -1px 2px #920
+					
+						&:hover
+							background linear-gradient(top, #e65 0%, #c53 60%, #b42 90%, #a31 100%)
+					
+						&:active
+							background linear-gradient(bottom, #c43 0%, #a31 100%)

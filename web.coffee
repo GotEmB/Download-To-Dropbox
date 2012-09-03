@@ -84,8 +84,8 @@ io.sockets.on "connection", (socket) ->
 	
 	socket.on "dtd_getFileName", (url, callback) ->
 		request.head url, (err, res) ->
-			url = _(res.request.redirects).last() ? url
-			callback _(url).split("/").last()
+			url = _(res.request.redirects).last() ? url unless err?
+			callback url, _(url.split("/")).last()
 	
 	socket.on "downloadtodropbox", ([url, path, replace]..., callback) ->
 		lastProgress = Date.now()
@@ -98,6 +98,6 @@ io.sockets.on "connection", (socket) ->
 		dld.on "waiting", ({percent, bytes}) ->
 			socket.emit "waiting_#{hash}", percent: percent, bytes: bytes
 		dld.once "started", (fileSize) ->
-			callback hash: hash, fileSize: fileSize
+			callback hash: hash, fileSize: fileSize, path: path
 
 server.listen (port = process.env.PORT ? 5000), -> console.log "Listening on port #{port}"
